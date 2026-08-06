@@ -69,27 +69,30 @@ public class User extends BaseEntity {
         this.ownedProjects.add(project);
         project.setOwner(this);
     }
+
     public void removeProject(Project project){
         this.ownedProjects.remove(project);
         project.setOwner(null);
     }
+
     public void addWorkingTask(Task task){
         this.workingTasks.add(task);
         task.setAssignee(this);
     }
+
     public void removeWorkingTask(Task task){
         this.workingTasks.remove(task);
         task.setAssignee(null);
     }
+
     public void addCreatedTask(Task task){
         this.createdTasks.add(task);
         task.setAssignee(this);
     }
+
     public void removeCreatedTask(Task task){
         this.createdTasks.remove(task);
         task.setAssignee(null);
     }
-
-
 
 }
