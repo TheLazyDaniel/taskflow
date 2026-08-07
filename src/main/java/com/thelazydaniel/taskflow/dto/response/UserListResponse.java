@@ -2,7 +2,6 @@ package com.thelazydaniel.taskflow.dto.response;
 
 import com.thelazydaniel.taskflow.domain.entity.User;
 import com.thelazydaniel.taskflow.domain.enums.UserRole;
-import tools.jackson.databind.annotation.JsonSerialize;
 
 public record UserListResponse(
         String id,
