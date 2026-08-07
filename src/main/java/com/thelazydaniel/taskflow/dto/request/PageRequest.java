@@ -25,7 +25,7 @@ public class PageRequest {
 
         public Pageable toPageable(){
             Sort sort = Sort.by(String.valueOf(direction),sortBy);
-            return (Pageable) org.springframework.data.domain.PageRequest.of(page,size,sort);
+            return org.springframework.data.domain.PageRequest.of(page,size,sort);
         }
 }
 

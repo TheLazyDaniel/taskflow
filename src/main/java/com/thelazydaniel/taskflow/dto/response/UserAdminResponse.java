@@ -3,7 +3,6 @@ package com.thelazydaniel.taskflow.dto.response;
 import com.thelazydaniel.taskflow.domain.enums.UserRole;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
 
 public record UserAdminResponse(
         Long id,

@@ -12,6 +12,8 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
+    @Override
+    @NonNull
     Page<User> findAll(@NonNull Pageable pageable);
 
     boolean existsByUsername(String username);
