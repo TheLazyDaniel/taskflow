@@ -10,8 +10,5 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 public class UserController {
-    @PostMapping(value = "/users/register")
-    public ResponseEntity<UserResponse> registerUser(@RequestBody CreateUserRequest user) {
-
-    }
+    
 }
