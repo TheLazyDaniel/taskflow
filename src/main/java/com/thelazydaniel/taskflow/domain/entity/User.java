@@ -18,13 +18,14 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Table(name = "users")
 public class User extends BaseEntity {
 
     @Column(name = "username",
             unique = true,
             nullable = false)
     @Size(min = 3)
-    private String Username;
+    private String username;
 
     @Column(unique = true)
     @Email(

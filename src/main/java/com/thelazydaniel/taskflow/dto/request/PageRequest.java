@@ -5,15 +5,13 @@ import jakarta.validation.constraints.Min;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.query.SortDirection;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
-
-import java.awt.print.Pageable;
+import org.springframework.data.domain.Pageable;
 
 
 @Data
 @NoArgsConstructor
-public class PageRequestDTO{
+public class PageRequest {
         @Min(value = 0, message = "Page have to be larger than 0")
         private int page;
 
@@ -27,7 +25,7 @@ public class PageRequestDTO{
 
         public Pageable toPageable(){
             Sort sort = Sort.by(String.valueOf(direction),sortBy);
-            return (Pageable) PageRequest.of(page,size,sort);
+            return (Pageable) org.springframework.data.domain.PageRequest.of(page,size,sort);
         }
 }
 
