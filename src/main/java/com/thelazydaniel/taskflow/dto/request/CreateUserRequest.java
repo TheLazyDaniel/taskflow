@@ -11,13 +11,14 @@ public record CreateUserRequest(
         @Pattern(regexp = "^[a-zA-Z0-9._-]+$", message = "Username contains invalid characters")
         String username,
 
+        @NotBlank(message = "Email is required")
         @Email(
                 message = "Invalid email format",
                 regexp = "^[A-Za-z0-9+_.-]+@(.+)$"
         ) String email,
 
-        @NotBlank
-        @Size(min = 3)
+        @NotBlank(message = "Password is required")
+        @Size(min = 3, message = "Password should have at least 3 characters")
         String password,
 
         String firstName,

@@ -6,6 +6,7 @@ import com.thelazydaniel.taskflow.dto.mapper.UserMapper;
 import com.thelazydaniel.taskflow.dto.request.CreateUserRequest;
 import com.thelazydaniel.taskflow.dto.request.PageRequest;
 import com.thelazydaniel.taskflow.dto.request.UpdateUserRequest;
+import com.thelazydaniel.taskflow.dto.request.UpdateUserRoleRequest;
 import com.thelazydaniel.taskflow.dto.response.PageResponse;
 import com.thelazydaniel.taskflow.dto.response.UserAdminResponse;
 import com.thelazydaniel.taskflow.dto.response.UserResponse;
@@ -46,6 +47,8 @@ public class UserService {
         String hashedPassword = passwordEncoder.encode(createUserRequest.password());
         User user = userMapper.toEntity(createUserRequest);
         user.setPasswordHash(hashedPassword);
+        user.setRole(UserRole.USER);
+        //default
         User savedUser = userRepository.save(user);
         return userMapper.toUserResponse(savedUser);
     }
@@ -70,17 +73,21 @@ public class UserService {
         User user =  userRepository.findById(id)
                 .orElseThrow(()-> new UserNotFoundException(id));
         return switch(currentUserRole){
+            case "USER" -> userMapper.toUserResponse(user);
             case "ADMIN" -> userMapper.toUserAdminResponse(user);
             case "MANAGER" -> userMapper.toUserManagerResponse(user);
             default -> new unknownUserRoleException(currentUserRole);
         };
     }
+    //Should need rewrite
 
     @Transactional
-    public UserAdminResponse updateUserRole(long id, UserRole role){
+    public UserAdminResponse updateUserRole(
+            long id,
+            UpdateUserRoleRequest updateUserRoleRequest){
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException(id));
-        user.setRole(role);
+        user.setRole(UserRole.valueOf(updateUserRoleRequest.Role()));
         userRepository.save(user);
         return userMapper.toUserAdminResponse(user);
     }
@@ -94,7 +101,9 @@ public class UserService {
 
     @Transactional
     public void deleteUserById(long id) {
-        userRepository.deleteById(id);
+        User user =  userRepository.findById(id)
+                .orElseThrow(() -> new UserNotFoundException(id));
+        userRepository.delete(user);
     }
 
 }
