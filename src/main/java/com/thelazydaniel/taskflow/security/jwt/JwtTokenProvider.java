@@ -36,7 +36,28 @@ public class JwtTokenProvider {
     private long jwtRefreshExpirationMs;
 
     public String generateJwtToken(Authentication authentication) {
-        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+
+        if (authentication == null) {
+            throw new IllegalArgumentException("Authentication cannot be null");
+        }
+
+        Object principal = authentication.getPrincipal();
+        if (principal == null) {
+            throw new IllegalArgumentException("Authentication principal cannot be null");
+        }
+
+        if (!(principal instanceof UserDetails)) {
+            throw new IllegalArgumentException(
+                    "Expected UserDetails but got: " + principal.getClass().getName());
+        }
+
+        UserDetails userDetails = (UserDetails) principal;
+
+        String username = userDetails.getUsername();
+        if (username == null || username.isEmpty()) {
+            throw new IllegalArgumentException("Username cannot be null or empty");
+        }
+        
         return generateTokenFromUsername(userDetails.getUsername(),
                 userDetails.getAuthorities().stream()
                         .map(GrantedAuthority::getAuthority)
