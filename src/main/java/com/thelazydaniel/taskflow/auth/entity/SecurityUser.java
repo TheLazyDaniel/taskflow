@@ -40,10 +40,10 @@ public class SecurityUser implements UserDetails {
     }
 
     @Override
-    @NotNull
     public String getUsername(){
         return user.getUsername();
     }
+
     @Override
     public boolean isAccountNonExpired(){
         return true;
