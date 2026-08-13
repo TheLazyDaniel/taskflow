@@ -1,6 +1,6 @@
 package com.thelazydaniel.taskflow.user.dto.response;
 
-import com.thelazydaniel.taskflow.user.UserRole;
+import com.thelazydaniel.taskflow.user.enums.UserRole;
 
 import java.time.LocalDateTime;
 

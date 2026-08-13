@@ -1,14 +1,17 @@
 package com.thelazydaniel.taskflow.user;
 
+import com.thelazydaniel.taskflow.common.util.SecurityUtils;
 import com.thelazydaniel.taskflow.user.dto.mapper.UserMapper;
-import com.thelazydaniel.taskflow.user.dto.request.CreateUserRequest;
+import com.thelazydaniel.taskflow.auth.dto.request.RegisterRequest;
 import com.thelazydaniel.taskflow.common.dto.request.PageRequest;
 import com.thelazydaniel.taskflow.user.dto.request.UpdateUserRequest;
 import com.thelazydaniel.taskflow.user.dto.request.UpdateUserRoleRequest;
 import com.thelazydaniel.taskflow.common.dto.response.PageResponse;
 import com.thelazydaniel.taskflow.user.dto.response.UserAdminResponse;
 import com.thelazydaniel.taskflow.user.dto.response.UserResponse;
-import com.thelazydaniel.taskflow.user.exception.UserNotFoundException;
+import com.thelazydaniel.taskflow.user.entity.User;
+import com.thelazydaniel.taskflow.user.enums.UserRole;
+import com.thelazydaniel.taskflow.user.exception.UserIdNotFoundException;
 import com.thelazydaniel.taskflow.common.exception.illegalArgumentException;
 import com.thelazydaniel.taskflow.user.exception.unknownUserRoleException;
 
@@ -34,15 +37,15 @@ public class UserService {
     }
 
     @Transactional
-    public UserResponse registerUser(CreateUserRequest createUserRequest) {
-        if (userRepository.existsByUsername(createUserRequest.username())){
+    public UserResponse registerUser(RegisterRequest registerRequest) {
+        if (userRepository.existsByUsername(registerRequest.username())){
             throw new illegalArgumentException("Username already exists");
         }
-        if (userRepository.existsByEmail(createUserRequest.email())){
+        if (userRepository.existsByEmail(registerRequest.email())){
             throw new illegalArgumentException("Email already exists");
         }
-        String hashedPassword = passwordEncoder.encode(createUserRequest.password());
-        User user = userMapper.toEntity(createUserRequest);
+        String hashedPassword = passwordEncoder.encode(registerRequest.password());
+        User user = userMapper.toEntity(registerRequest);
         user.setPasswordHash(hashedPassword);
         user.setRole(UserRole.USER);
         //default
@@ -59,21 +62,22 @@ public class UserService {
             throw new illegalArgumentException("Email already exists");
         }
         User user = userRepository.findById(id)
-                .orElseThrow(()-> new UserNotFoundException(id));
+                .orElseThrow(()-> new UserIdNotFoundException(id));
         userMapper.updateEntity(updateUserRequest, user);
         User updatedUser = userRepository.save(user);
         return userMapper.toUserResponse(updatedUser);
     }
 
     @Transactional(readOnly = true)
-    public Object findUserById(long id, String currentUserRole){
+    public Object findUserById(long id){
         User user =  userRepository.findById(id)
-                .orElseThrow(()-> new UserNotFoundException(id));
-        return switch(currentUserRole){
+                .orElseThrow(()-> new UserIdNotFoundException(id));
+        String currentRole = SecurityUtils.getCurrentUserRole();
+        return switch(currentRole){
             case "USER" -> userMapper.toUserResponse(user);
             case "ADMIN" -> userMapper.toUserAdminResponse(user);
             case "MANAGER" -> userMapper.toUserManagerResponse(user);
-            default -> new unknownUserRoleException(currentUserRole);
+            default -> throw new unknownUserRoleException(currentRole);
         };
     }
     //Should need rewrite
@@ -83,7 +87,7 @@ public class UserService {
             long id,
             UpdateUserRoleRequest updateUserRoleRequest){
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new UserNotFoundException(id));
+                .orElseThrow(() -> new UserIdNotFoundException(id));
         user.setRole(UserRole.valueOf(updateUserRoleRequest.Role()));
         userRepository.save(user);
         return userMapper.toUserAdminResponse(user);
@@ -99,7 +103,7 @@ public class UserService {
     @Transactional
     public void deleteUserById(long id) {
         User user =  userRepository.findById(id)
-                .orElseThrow(() -> new UserNotFoundException(id));
+                .orElseThrow(() -> new UserIdNotFoundException(id));
         userRepository.delete(user);
     }
 

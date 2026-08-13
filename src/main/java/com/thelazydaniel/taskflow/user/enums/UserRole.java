@@ -1,4 +1,4 @@
-package com.thelazydaniel.taskflow.user;
+package com.thelazydaniel.taskflow.user.enums;
 
 public enum UserRole {
     USER,

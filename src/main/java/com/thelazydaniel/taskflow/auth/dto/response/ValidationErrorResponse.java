@@ -1,4 +1,4 @@
-package com.thelazydaniel.taskflow.common.exception;
+package com.thelazydaniel.taskflow.auth.dto.response;
 
 import java.time.LocalDateTime;
 import java.util.List;

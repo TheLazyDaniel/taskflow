@@ -1,7 +1,12 @@
 package com.thelazydaniel.taskflow.common.exception;
 
-import com.thelazydaniel.taskflow.user.exception.UserNotFoundException;
+import com.thelazydaniel.taskflow.auth.dto.response.ValidationErrorResponse;
+import com.thelazydaniel.taskflow.common.dto.response.ErrorResponse;
+import com.thelazydaniel.taskflow.user.exception.UserIdNotFoundException;
+import com.thelazydaniel.taskflow.user.exception.UserNameNotFoundException;
 import com.thelazydaniel.taskflow.user.exception.unknownUserRoleException;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -15,6 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -25,6 +31,8 @@ public class GlobalExceptionHandler {
 
         Map<String, String> fieldErrors = new HashMap<>();
         List<String> globalErrors = List.of();
+
+        log.error("MethodArgumentNotValidException: ", ex);
 
         ex.getBindingResult().getAllErrors().forEach(error -> {
             if (error instanceof FieldError) {
@@ -47,28 +55,99 @@ public class GlobalExceptionHandler {
                 .body(errorResponse);
     }
 
-    @ExceptionHandler(UserNotFoundException.class)
-    public ResponseEntity<String> handleNotFound(UserNotFoundException e) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(e.getMessage());
+    @ExceptionHandler(UserIdNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleIdNotFound(
+            UserIdNotFoundException e,
+            HttpServletRequest request) {
+
+        log.error("UserIdNotFoundException: ", e);
+
+        ErrorResponse errorResponse = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.NOT_FOUND.value(),
+                HttpStatus.NOT_FOUND.getReasonPhrase(),
+                e.getMessage(),
+                request.getPathInfo()
+        );
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(errorResponse);
+    }
+
+    @ExceptionHandler(UserNameNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNameNotFound(
+            UserNameNotFoundException e,
+            HttpServletRequest request) {
+
+        log.error("UserNameNotFoundException: ", e);
+
+        ErrorResponse errorResponse = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.NOT_FOUND.value(),
+                HttpStatus.NOT_FOUND.getReasonPhrase(),
+                e.getMessage(),
+                request.getPathInfo()
+        );
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(errorResponse);
     }
 
     @ExceptionHandler(unknownUserRoleException.class)
-    public ResponseEntity<String> handleUnknownUserRole(unknownUserRoleException e) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(e.getMessage());
+    public ResponseEntity<ErrorResponse> handleUnknownUserRole(
+            unknownUserRoleException e,
+            HttpServletRequest request) {
+
+        log.error("UnknownUserRoleException: ", e);
+
+        ErrorResponse errorResponse = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.BAD_REQUEST.value(),
+                HttpStatus.BAD_REQUEST.getReasonPhrase(),
+                e.getMessage(),
+                request.getPathInfo()
+        );
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(errorResponse);
     }
 
     @ExceptionHandler(illegalArgumentException.class)
-    public ResponseEntity<String> handleIllegalArgumentException(IllegalArgumentException e) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(e.getMessage());
+    public ResponseEntity<ErrorResponse> handleIllegalArgumentException(
+            IllegalArgumentException e,
+            HttpServletRequest request) {
+
+        log.error("illegalArgumentException: ", e);
+
+        ErrorResponse errorResponse = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.BAD_REQUEST.value(),
+                HttpStatus.BAD_REQUEST.getReasonPhrase(),
+                e.getMessage(),
+                request.getPathInfo()
+        );
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(errorResponse);
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<String> handleGeneric(Exception e) {
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(e.getMessage());
+    public ResponseEntity<ErrorResponse> handleGeneric(
+            Exception e,
+            HttpServletRequest request) {
+
+        log.error("Exception: ", e);
+
+        ErrorResponse errorResponse = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(),
+                e.getMessage(),
+                request.getPathInfo()
+        );
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(errorResponse);
     }
 }
 

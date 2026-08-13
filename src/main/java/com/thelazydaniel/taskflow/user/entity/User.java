@@ -1,8 +1,9 @@
-package com.thelazydaniel.taskflow.user;
+package com.thelazydaniel.taskflow.user.entity;
 
 import com.thelazydaniel.taskflow.common.entity.BaseEntity;
 import com.thelazydaniel.taskflow.project.Project;
 import com.thelazydaniel.taskflow.task.Task;
+import com.thelazydaniel.taskflow.user.enums.UserRole;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Size;
@@ -43,6 +44,7 @@ public class User extends BaseEntity {
     private String lastName;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private UserRole role;
 
     @OneToMany(mappedBy = "owner",

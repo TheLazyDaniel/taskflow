@@ -1,7 +1,7 @@
 package com.thelazydaniel.taskflow.project;
 
 import com.thelazydaniel.taskflow.common.entity.BaseEntity;
-import com.thelazydaniel.taskflow.user.User;
+import com.thelazydaniel.taskflow.user.entity.User;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;

@@ -1,7 +1,10 @@
-package com.thelazydaniel.taskflow.common.exception;
+package com.thelazydaniel.taskflow.common.dto.response;
+
+import lombok.Builder;
 
 import java.time.LocalDateTime;
 
+@Builder
 public record ErrorResponse(
         LocalDateTime timestamp,
         int status,

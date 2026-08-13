@@ -1,8 +1,8 @@
 package com.thelazydaniel.taskflow.user.dto.mapper;
 
 
-import com.thelazydaniel.taskflow.user.User;
-import com.thelazydaniel.taskflow.user.dto.request.CreateUserRequest;
+import com.thelazydaniel.taskflow.user.entity.User;
+import com.thelazydaniel.taskflow.auth.dto.request.RegisterRequest;
 import com.thelazydaniel.taskflow.user.dto.request.UpdateUserRequest;
 import com.thelazydaniel.taskflow.user.dto.response.UserAdminResponse;
 import com.thelazydaniel.taskflow.user.dto.response.UserManagerResponse;
@@ -13,7 +13,7 @@ import org.mapstruct.*;
 public interface UserMapper {
 
 
-    User toEntity(CreateUserRequest request);
+    User toEntity(RegisterRequest request);
 
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
