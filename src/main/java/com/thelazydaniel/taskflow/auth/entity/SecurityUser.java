@@ -29,7 +29,6 @@ public class SecurityUser implements UserDetails {
     }
 
     @Override
-    @NotNull
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return authorities;
     }
