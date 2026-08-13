@@ -3,7 +3,6 @@ package com.thelazydaniel.taskflow.auth.controller;
 import com.thelazydaniel.taskflow.auth.dto.request.LoginRequest;
 import com.thelazydaniel.taskflow.auth.dto.response.JwtResponse;
 import com.thelazydaniel.taskflow.auth.service.AuthService;
-import com.thelazydaniel.taskflow.security.jwt.JwtTokenProvider;
 import com.thelazydaniel.taskflow.user.UserService;
 import com.thelazydaniel.taskflow.auth.dto.request.RegisterRequest;
 import com.thelazydaniel.taskflow.user.dto.response.UserResponse;
