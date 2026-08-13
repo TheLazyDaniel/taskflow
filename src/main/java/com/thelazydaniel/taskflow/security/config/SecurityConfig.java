@@ -32,7 +32,7 @@ public class SecurityConfig {
     public SecurityFilterChain SecurityFilterChain(
             HttpSecurity http,
             JwtAuthenticationFilter jwtAuthenticationFilter,
-            JwtAuthEntryPoint jwtAuthEntryPoint) throws Exception {
+            JwtAuthEntryPoint jwtAuthEntryPoint)  {
         http
             .cors(cors -> cors.disable())
             .csrf(csrf -> csrf.disable())
@@ -61,7 +61,7 @@ public class SecurityConfig {
 
     @Bean
     public AuthenticationManager authenticationManager(
-            AuthenticationConfiguration configuration) throws Exception {
+            AuthenticationConfiguration configuration) {
         return configuration.getAuthenticationManager();
     }
 

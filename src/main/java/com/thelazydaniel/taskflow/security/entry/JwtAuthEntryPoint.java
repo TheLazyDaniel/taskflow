@@ -1,7 +1,6 @@
 package com.thelazydaniel.taskflow.security.entry;
 
 import com.thelazydaniel.taskflow.common.dto.response.ErrorResponse;
-import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
