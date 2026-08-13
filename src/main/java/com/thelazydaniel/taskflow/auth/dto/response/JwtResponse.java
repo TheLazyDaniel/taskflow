@@ -12,7 +12,7 @@ import java.util.List;
 public class JwtResponse{
     private String accessToken;
     private String refreshToken;
-    private String type = "bearer";
+    private String type;
     private String username;
     private List<String> roles;
 }
