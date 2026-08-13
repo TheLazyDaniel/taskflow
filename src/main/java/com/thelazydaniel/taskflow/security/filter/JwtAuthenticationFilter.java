@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
-    
+
 
     private final JwtTokenProvider jwtTokenProvider;
 

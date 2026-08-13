@@ -5,6 +5,7 @@ import com.thelazydaniel.taskflow.auth.exception.AccountDisabledException;
 import com.thelazydaniel.taskflow.auth.exception.AccountLockedException;
 import com.thelazydaniel.taskflow.user.UserRepository;
 import com.thelazydaniel.taskflow.user.entity.User;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -21,7 +22,8 @@ public class CustomUserDetailsService implements UserDetailsService {
     }
 
     @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+    @NonNull
+    public UserDetails loadUserByUsername(@NonNull String username) throws UsernameNotFoundException {
         log.info("Loading user by username: {}", username);
 
         long startTime = System.currentTimeMillis();
