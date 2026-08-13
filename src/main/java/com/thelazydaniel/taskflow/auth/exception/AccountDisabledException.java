@@ -1,5 +1,8 @@
 package com.thelazydaniel.taskflow.auth.exception;
 
+import lombok.Getter;
+
+@Getter
 public class AccountDisabledException extends AuthenticationException {
     private final String username;
 
@@ -8,5 +11,4 @@ public class AccountDisabledException extends AuthenticationException {
         this.username = username;
     }
 
-    public String getUsername() {return username;}
 }

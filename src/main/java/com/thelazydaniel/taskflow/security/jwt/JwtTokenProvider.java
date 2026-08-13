@@ -54,10 +54,10 @@ public class JwtTokenProvider {
         UserDetails userDetails = (UserDetails) principal;
 
         String username = userDetails.getUsername();
-        if (username == null || username.isEmpty()) {
+        if (username.isEmpty()) {
             throw new IllegalArgumentException("Username cannot be null or empty");
         }
-        
+
         return generateTokenFromUsername(userDetails.getUsername(),
                 userDetails.getAuthorities().stream()
                         .map(GrantedAuthority::getAuthority)

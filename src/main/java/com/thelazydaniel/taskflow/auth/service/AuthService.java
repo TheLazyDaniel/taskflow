@@ -2,7 +2,6 @@ package com.thelazydaniel.taskflow.auth.service;
 
 import com.thelazydaniel.taskflow.auth.dto.response.JwtResponse;
 import com.thelazydaniel.taskflow.security.jwt.JwtTokenProvider;
-import com.thelazydaniel.taskflow.user.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;

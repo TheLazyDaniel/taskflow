@@ -1,5 +1,8 @@
 package com.thelazydaniel.taskflow.auth.exception;
 
+import lombok.Getter;
+
+@Getter
 public class AccountLockedException extends AuthenticationException{
     private final String username;
 
@@ -7,6 +10,4 @@ public class AccountLockedException extends AuthenticationException{
         super(String.format("Account locked for %s", username));
         this.username = username;
     }
-
-    public String getUsername() {return username;}
 }
