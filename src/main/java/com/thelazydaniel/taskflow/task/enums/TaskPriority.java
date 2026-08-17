@@ -1,4 +1,4 @@
-package com.thelazydaniel.taskflow.task;
+package com.thelazydaniel.taskflow.task.enums;
 
 public enum TaskPriority {
     LOW,

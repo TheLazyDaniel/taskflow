@@ -47,4 +47,7 @@ public record PageResponse<T>(
         );
     }
 
+    public int currentPage() {
+        return pageNumber;
+    }
 }

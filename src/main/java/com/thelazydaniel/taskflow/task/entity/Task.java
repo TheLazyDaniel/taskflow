@@ -1,6 +1,8 @@
-package com.thelazydaniel.taskflow.task;
+package com.thelazydaniel.taskflow.task.entity;
 
 import com.thelazydaniel.taskflow.common.entity.BaseEntity;
+import com.thelazydaniel.taskflow.task.enums.TaskPriority;
+import com.thelazydaniel.taskflow.task.enums.TaskStatus;
 import com.thelazydaniel.taskflow.user.entity.User;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Size;
