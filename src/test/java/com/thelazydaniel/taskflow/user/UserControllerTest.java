@@ -10,7 +10,7 @@ import com.thelazydaniel.taskflow.user.dto.response.UserAdminResponse;
 import com.thelazydaniel.taskflow.user.dto.response.UserResponse;
 import com.thelazydaniel.taskflow.user.entity.User;
 import com.thelazydaniel.taskflow.user.enums.UserRole;
-import com.thelazydaniel.taskflow.user.UserService;
+import lombok.NonNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -114,6 +114,7 @@ class UserControllerTest {
             implements WithSecurityContextFactory<WithSecurityUser> {
 
         @Override
+        @NonNull
         public SecurityContext createSecurityContext(WithSecurityUser annotation) {
             SecurityContext context = SecurityContextHolder.createEmptyContext();
 

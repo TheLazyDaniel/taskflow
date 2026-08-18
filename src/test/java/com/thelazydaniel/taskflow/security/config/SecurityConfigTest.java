@@ -44,20 +44,15 @@ class SecurityConfigTest {
     @MockitoBean
     private UserService userService;
 
-    private PasswordEncoder passwordEncoder;
-    private User testUser;
-    private SecurityUser securityUser;
-    private String rawPassword;
-
     @BeforeEach
     void setUp() {
         // ✅ Use real BCrypt encoder for the test
-        passwordEncoder = new BCryptPasswordEncoder();
-        rawPassword = "password123";
+        PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+        String rawPassword = "password123";
         String encodedPassword = passwordEncoder.encode(rawPassword);
 
         // Create test user with proper encoded password
-        testUser = new User();
+        User testUser = new User();
         testUser.setId(1L);
         testUser.setUsername("testuser");
         testUser.setEmail("test@email.com");
@@ -67,7 +62,7 @@ class SecurityConfigTest {
         testUser.setAccountNonLocked(true);
 
         // Create SecurityUser from test user
-        securityUser = new SecurityUser(testUser);
+        SecurityUser securityUser = new SecurityUser(testUser);
 
         // ✅ Mock UserDetailsService to return the SecurityUser
         when(userDetailsService.loadUserByUsername("testuser"))

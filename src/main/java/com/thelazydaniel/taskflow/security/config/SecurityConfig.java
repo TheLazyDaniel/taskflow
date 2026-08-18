@@ -2,7 +2,6 @@ package com.thelazydaniel.taskflow.security.config;
 
 import com.thelazydaniel.taskflow.security.entry.JwtAuthEntryPoint;
 import com.thelazydaniel.taskflow.security.filter.JwtAuthenticationFilter;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -28,7 +27,7 @@ public class SecurityConfig {
             HttpSecurity http,
             JwtAuthenticationFilter jwtAuthenticationFilter,
             JwtAuthEntryPoint jwtAuthEntryPoint,
-            AuthenticationProvider authenticationProvider) throws Exception {
+            AuthenticationProvider authenticationProvider) {
 
         http
                 .cors(cors -> cors.disable())
@@ -58,7 +57,7 @@ public class SecurityConfig {
 
     @Bean
     public AuthenticationManager authenticationManager(
-            AuthenticationConfiguration configuration) throws Exception {
+            AuthenticationConfiguration configuration) {
         return configuration.getAuthenticationManager();
     }
 
