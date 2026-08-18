@@ -88,7 +88,7 @@ public class UserService {
             UpdateUserRoleRequest updateUserRoleRequest){
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UserIdNotFoundException(id));
-        user.setRole(UserRole.valueOf(updateUserRoleRequest.Role()));
+        user.setRole(UserRole.valueOf(updateUserRoleRequest.role()));
         userRepository.save(user);
         return userMapper.toUserAdminResponse(user);
     }

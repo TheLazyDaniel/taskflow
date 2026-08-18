@@ -1,51 +1,58 @@
 package com.thelazydaniel.taskflow.user;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.thelazydaniel.taskflow.common.util.SecurityUtils;
+import com.thelazydaniel.taskflow.auth.entity.SecurityUser;
 import com.thelazydaniel.taskflow.common.dto.request.PageRequest;
 import com.thelazydaniel.taskflow.common.dto.response.PageResponse;
+import com.thelazydaniel.taskflow.common.config.TestSecurityConfig;
 import com.thelazydaniel.taskflow.user.dto.request.UpdateUserRequest;
 import com.thelazydaniel.taskflow.user.dto.request.UpdateUserRoleRequest;
 import com.thelazydaniel.taskflow.user.dto.response.UserAdminResponse;
 import com.thelazydaniel.taskflow.user.dto.response.UserResponse;
+import com.thelazydaniel.taskflow.user.entity.User;
 import com.thelazydaniel.taskflow.user.enums.UserRole;
+import com.thelazydaniel.taskflow.user.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.MockedStatic;
 import org.springframework.beans.factory.annotation.Autowired;
-
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.test.context.support.WithSecurityContext;
+import org.springframework.security.test.context.support.WithSecurityContextFactory;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@ExtendWith(SpringExtension.class)
-@WebMvcTest(controllers = UserController.class)
+@SpringBootTest
+@AutoConfigureMockMvc
+@Import(TestSecurityConfig.class)
 class UserControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
 
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    @MockBean
+    @MockitoBean
     private UserService userService;
 
     private UserResponse userResponse;
@@ -78,137 +85,389 @@ class UserControllerTest {
                 LocalDateTime.now()
         );
 
-        pageResponse = new PageResponse<>(List.of(userAdminResponse), 0, 10, 1, 1, true, true, false);
+        List<UserAdminResponse> content = List.of(userAdminResponse);
+        pageResponse = new PageResponse<>(
+                content,
+                0,
+                10,
+                1,
+                1,
+                true,
+                true,
+                false
+        );
+    }
+
+    // ============================================
+    // ✅ Custom annotation for test authentication
+    // ============================================
+
+    @Retention(RetentionPolicy.RUNTIME)
+    @WithSecurityContext(factory = WithSecurityUserSecurityContextFactory.class)
+    public @interface WithSecurityUser {
+        String username() default "testuser";
+        UserRole role() default UserRole.USER;
+        long userId() default 1L;
+    }
+
+    public static class WithSecurityUserSecurityContextFactory
+            implements WithSecurityContextFactory<WithSecurityUser> {
+
+        @Override
+        public SecurityContext createSecurityContext(WithSecurityUser annotation) {
+            SecurityContext context = SecurityContextHolder.createEmptyContext();
+
+            // Create User entity
+            User user = new User();
+            user.setId(annotation.userId());
+            user.setUsername(annotation.username());
+            user.setEmail(annotation.username() + "@email.com");
+            user.setRole(annotation.role());
+            user.setEnabled(true);
+            user.setAccountNonLocked(true);
+
+            // Create SecurityUser (wraps User entity)
+            SecurityUser securityUser = new SecurityUser(user);
+
+            UsernamePasswordAuthenticationToken auth =
+                    new UsernamePasswordAuthenticationToken(
+                            securityUser,  // ✅ Principal is SecurityUser
+                            null,
+                            securityUser.getAuthorities()
+                    );
+
+            context.setAuthentication(auth);
+            return context;
+        }
+    }
+
+    // ============================================
+    // ✅ TEST: GET /users/me - Get Current User
+    // ============================================
+
+    @Test
+    @WithSecurityUser(username = "testuser", role = UserRole.USER)
+    void getCurrentUser_ShouldReturnUserResponse_WhenAuthenticated() throws Exception {
+        // Arrange
+        when(userService.findUserById(1L)).thenReturn(userResponse);
+
+        mockMvc.perform(get("/users/me"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id", is(1)))
+                .andExpect(jsonPath("$.username", is("testuser")))
+                .andExpect(jsonPath("$.email", is("test@email.com")))
+                .andExpect(jsonPath("$.role", is("USER")));
     }
 
     @Test
-    @WithMockUser(roles = "ADMIN")
-    void getAllUsers_allowedForAdmin() throws Exception {
-        PageRequest pr = new PageRequest(0, 10, "id", "ASCENDING");
+    void getCurrentUser_ShouldReturnUnauthorized_WhenNotAuthenticated() throws Exception {
+        mockMvc.perform(get("/users/me"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    // ============================================
+    // ✅ TEST: PUT /users/me - Update Current User
+    // ============================================
+
+    @Test
+    @WithSecurityUser(username = "testuser", role = UserRole.USER)
+    void updateCurrentUser_ShouldReturnUpdatedUserResponse_WhenValidRequest() throws Exception {
+        // Arrange
+        when(userService.updateUser(any(UpdateUserRequest.class), anyLong()))
+                .thenReturn(userResponse);
+
+        String jsonRequest = """
+                {
+                    "username": "updateduser",
+                    "email": "updated@email.com",
+                    "firstName": "Updated",
+                    "lastName": "User"
+                }
+                """;
+
+        mockMvc.perform(put("/users/me")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonRequest))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id", is(1)))
+                .andExpect(jsonPath("$.username", is("testuser")))
+                .andExpect(jsonPath("$.email", is("test@email.com")));
+    }
+
+    @Test
+    @WithSecurityUser(username = "testuser", role = UserRole.USER)
+    void updateCurrentUser_ShouldReturnBadRequest_WhenInvalidRequest() throws Exception {
+        String jsonRequest = """
+                {
+                    "username": "",
+                    "email": "invalid-email",
+                    "firstName": "",
+                    "lastName": ""
+                }
+                """;
+
+        mockMvc.perform(put("/users/me")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonRequest))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void updateCurrentUser_ShouldReturnUnauthorized_WhenNotAuthenticated() throws Exception {
+        String jsonRequest = """
+                {
+                    "username": "updateduser",
+                    "email": "updated@email.com",
+                    "firstName": "Updated",
+                    "lastName": "User"
+                }
+                """;
+
+        mockMvc.perform(put("/users/me")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonRequest))
+                .andExpect(status().isUnauthorized());
+    }
+
+    // ============================================
+    // ✅ TEST: GET /users/{id} - Get User By ID
+    // ============================================
+
+    @Test
+    @WithSecurityUser(username = "manager", role = UserRole.MANAGER)
+    void getUserById_ShouldReturnUserResponse_WhenManager() throws Exception {
+        // Arrange
+        when(userService.findUserById(1L)).thenReturn(userResponse);
+
+        mockMvc.perform(get("/users/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id", is(1)))
+                .andExpect(jsonPath("$.username", is("testuser")));
+    }
+
+    @Test
+    @WithSecurityUser(username = "admin", role = UserRole.ADMIN)
+    void getUserById_ShouldReturnUserAdminResponse_WhenAdmin() throws Exception {
+        // Arrange
+        when(userService.findUserById(1L)).thenReturn(userAdminResponse);
+
+        mockMvc.perform(get("/users/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id", is(1)))
+                .andExpect(jsonPath("$.username", is("testuser")))
+                .andExpect(jsonPath("$.enabled", is(true)))
+                .andExpect(jsonPath("$.accountNonLocked", is(true)));
+    }
+
+    @Test
+    @WithSecurityUser(username = "testuser", role = UserRole.USER)
+    void getUserById_ShouldReturnForbidden_WhenUser() throws Exception {
+        mockMvc.perform(get("/users/1"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void getUserById_ShouldReturnUnauthorized_WhenNotAuthenticated() throws Exception {
+        mockMvc.perform(get("/users/1"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    // ============================================
+    // ✅ TEST: GET /users - Get All Users (Admin Only)
+    // ============================================
+
+    @Test
+    @WithSecurityUser(username = "admin", role = UserRole.ADMIN)
+    void getAllUsers_ShouldReturnPageResponse_WhenAdmin() throws Exception {
+        // Arrange
         when(userService.getAllUsers(any(PageRequest.class))).thenReturn(pageResponse);
 
         mockMvc.perform(get("/users")
                         .param("page", "0")
                         .param("size", "10")
                         .param("sortBy", "id")
-                        .param("sortDir", "ASCENDING")
-                        .accept(MediaType.APPLICATION_JSON))
+                        .param("sortDirection", "asc"))
                 .andExpect(status().isOk())
-                .andExpect(content().json(objectMapper.writeValueAsString(pageResponse)));
+                .andExpect(jsonPath("$.content", hasSize(1)))
+                .andExpect(jsonPath("$.content[0].id", is(1)))
+                .andExpect(jsonPath("$.content[0].username", is("testuser")))
+                .andExpect(jsonPath("$.totalElements", is(1)))
+                .andExpect(jsonPath("$.totalPages", is(1)));
     }
 
     @Test
-    @WithMockUser(roles = "USER")
-    void getAllUsers_forbiddenForUser() throws Exception {
+    @WithSecurityUser(username = "manager", role = UserRole.MANAGER)
+    void getAllUsers_ShouldReturnForbidden_WhenManager() throws Exception {
         mockMvc.perform(get("/users")
                         .param("page", "0")
-                        .param("size", "10")
-                        .param("sortBy", "id")
-                        .param("sortDir", "ASCENDING")
-                        .accept(MediaType.APPLICATION_JSON))
+                        .param("size", "10"))
                 .andExpect(status().isForbidden());
     }
 
     @Test
-    @WithMockUser(roles = "MANAGER")
-    void getUserById_allowedForManager() throws Exception {
-        when(userService.findUserById(2L)).thenReturn(userAdminResponse);
-
-        mockMvc.perform(get("/users/2").accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(content().json(objectMapper.writeValueAsString(userAdminResponse)));
-    }
-
-    @Test
-    @WithMockUser(roles = "USER")
-    void getUserById_forbiddenForUser() throws Exception {
-        mockMvc.perform(get("/users/2").accept(MediaType.APPLICATION_JSON))
+    @WithSecurityUser(username = "testuser", role = UserRole.USER)
+    void getAllUsers_ShouldReturnForbidden_WhenUser() throws Exception {
+        mockMvc.perform(get("/users")
+                        .param("page", "0")
+                        .param("size", "10"))
                 .andExpect(status().isForbidden());
     }
 
     @Test
-    @WithMockUser(roles = "ADMIN")
-    void updateUserRole_allowedForAdmin() throws Exception {
-        UpdateUserRoleRequest req = new UpdateUserRoleRequest("ADMIN");
-        when(userService.updateUserRole(anyLong(), any(UpdateUserRoleRequest.class))).thenReturn(userAdminResponse);
+    void getAllUsers_ShouldReturnUnauthorized_WhenNotAuthenticated() throws Exception {
+        mockMvc.perform(get("/users")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isUnauthorized());
+    }
 
-        mockMvc.perform(put("/users/3/role")
+    // ============================================
+    // ✅ TEST: PUT /users/{id}/role - Update User Role (Admin Only)
+    // ============================================
+
+    @Test
+    @WithSecurityUser(username = "admin", role = UserRole.ADMIN)
+    void updateUserRole_ShouldReturnUpdatedUserAdminResponse_WhenAdmin() throws Exception {
+        // Arrange
+        when(userService.updateUserRole(anyLong(), any(UpdateUserRoleRequest.class)))
+                .thenReturn(userAdminResponse);
+
+        String jsonRequest = """
+                {
+                    "role": "ADMIN"
+                }
+                """;
+
+        mockMvc.perform(put("/users/1/role")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(req))
-                        .accept(MediaType.APPLICATION_JSON))
+                        .content(jsonRequest))
                 .andExpect(status().isOk())
-                .andExpect(content().json(objectMapper.writeValueAsString(userAdminResponse)));
+                .andExpect(jsonPath("$.id", is(1)))
+                .andExpect(jsonPath("$.username", is("testuser")))
+                .andExpect(jsonPath("$.enabled", is(true)))
+                .andExpect(jsonPath("$.accountNonLocked", is(true)));
     }
 
     @Test
-    @WithMockUser(roles = "MANAGER")
-    void updateUserRole_forbiddenForManager() throws Exception {
-        UpdateUserRoleRequest req = new UpdateUserRoleRequest("ADMIN");
+    @WithSecurityUser(username = "admin", role = UserRole.ADMIN)
+    void updateUserRole_ShouldReturnBadRequest_WhenInvalidRole() throws Exception {
+        String jsonRequest = """
+                {
+                    "role": "INVALID_ROLE"
+                }
+                """;
 
-        mockMvc.perform(put("/users/3/role")
+        mockMvc.perform(put("/users/1/role")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(req))
-                        .accept(MediaType.APPLICATION_JSON))
+                        .content(jsonRequest))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithSecurityUser(username = "manager", role = UserRole.MANAGER)
+    void updateUserRole_ShouldReturnForbidden_WhenManager() throws Exception {
+        String jsonRequest = """
+                {
+                    "role": "ADMIN"
+                }
+                """;
+
+        mockMvc.perform(put("/users/1/role")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonRequest))
                 .andExpect(status().isForbidden());
     }
 
     @Test
-    @WithMockUser(roles = "ADMIN")
-    void deleteUser_allowedForAdmin() throws Exception {
-        mockMvc.perform(delete("/users/4"))
+    void updateUserRole_ShouldReturnUnauthorized_WhenNotAuthenticated() throws Exception {
+        String jsonRequest = """
+                {
+                    "role": "ADMIN"
+                }
+                """;
+
+        mockMvc.perform(put("/users/1/role")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonRequest))
+                .andExpect(status().isUnauthorized());
+    }
+
+    // ============================================
+    // ✅ TEST: DELETE /users/{id} - Delete User (Admin Only)
+    // ============================================
+
+    @Test
+    @WithSecurityUser(username = "admin", role = UserRole.ADMIN)
+    void deleteUserById_ShouldReturnNoContent_WhenAdmin() throws Exception {
+        // Arrange
+        doNothing().when(userService).deleteUserById(1L);
+
+        mockMvc.perform(delete("/users/1"))
                 .andExpect(status().isNoContent());
     }
 
     @Test
-    @WithMockUser(roles = "USER")
-    void deleteUser_forbiddenForUser() throws Exception {
-        mockMvc.perform(delete("/users/4"))
+    @WithSecurityUser(username = "manager", role = UserRole.MANAGER)
+    void deleteUserById_ShouldReturnForbidden_WhenManager() throws Exception {
+        mockMvc.perform(delete("/users/1"))
                 .andExpect(status().isForbidden());
     }
 
     @Test
-    @WithMockUser(roles = "USER")
-    void getCurrentUser_allowedForAuthenticated() throws Exception {
-        try (MockedStatic<SecurityUtils> securityUtils = mockStatic(SecurityUtils.class)) {
-            securityUtils.when(SecurityUtils::getCurrentUserId).thenReturn(1L);
-            when(userService.findUserById(1L)).thenReturn(userResponse);
-
-            mockMvc.perform(get("/users/me").accept(MediaType.APPLICATION_JSON))
-                    .andExpect(status().isOk())
-                    .andExpect(content().json(objectMapper.writeValueAsString(userResponse)));
-        }
+    @WithSecurityUser(username = "testuser", role = UserRole.USER)
+    void deleteUserById_ShouldReturnForbidden_WhenUser() throws Exception {
+        mockMvc.perform(delete("/users/1"))
+                .andExpect(status().isForbidden());
     }
 
     @Test
-    void getCurrentUser_unauthorizedWhenNotAuthenticated() throws Exception {
-        mockMvc.perform(get("/users/me").accept(MediaType.APPLICATION_JSON))
+    void deleteUserById_ShouldReturnUnauthorized_WhenNotAuthenticated() throws Exception {
+        mockMvc.perform(delete("/users/1"))
                 .andExpect(status().isUnauthorized());
     }
 
-    @Test
-    @WithMockUser(roles = "USER")
-    void updateCurrentUser_allowedForAuthenticated() throws Exception {
-        UpdateUserRequest req = new UpdateUserRequest("updateduser", "updated@email.com", "Updated", "User");
-        try (MockedStatic<SecurityUtils> securityUtils = mockStatic(SecurityUtils.class)) {
-            securityUtils.when(SecurityUtils::getCurrentUserId).thenReturn(1L);
-            when(userService.updateUser(any(UpdateUserRequest.class), anyLong())).thenReturn(userResponse);
+    // ============================================
+    // ✅ TEST: Error Handling
+    // ============================================
 
-            mockMvc.perform(put("/users/me")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(req))
-                            .accept(MediaType.APPLICATION_JSON))
-                    .andExpect(status().isOk())
-                    .andExpect(content().json(objectMapper.writeValueAsString(userResponse)));
-        }
+    @Test
+    @WithSecurityUser(username = "admin", role = UserRole.ADMIN)
+    void getUserById_ShouldReturnNotFound_WhenUserDoesNotExist() throws Exception {
+        // Arrange
+        when(userService.findUserById(999L))
+                .thenThrow(new com.thelazydaniel.taskflow.user.exception.UserIdNotFoundException(999L));
+
+        mockMvc.perform(get("/users/999"))
+                .andExpect(status().isNotFound());
     }
 
     @Test
-    void updateCurrentUser_unauthorizedWhenNotAuthenticated() throws Exception {
-        UpdateUserRequest req = new UpdateUserRequest("updateduser", "updated@email.com", "Updated", "User");
-        mockMvc.perform(put("/users/me")
+    @WithSecurityUser(username = "admin", role = UserRole.ADMIN)
+    void updateUserRole_ShouldReturnNotFound_WhenUserDoesNotExist() throws Exception {
+        // Arrange
+        when(userService.updateUserRole(anyLong(), any(UpdateUserRoleRequest.class)))
+                .thenThrow(new com.thelazydaniel.taskflow.user.exception.UserIdNotFoundException(999L));
+
+        String jsonRequest = """
+                {
+                    "role": "ADMIN"
+                }
+                """;
+
+        mockMvc.perform(put("/users/999/role")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(req))
-                        .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isUnauthorized());
+                        .content(jsonRequest))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithSecurityUser(username = "admin", role = UserRole.ADMIN)
+    void deleteUserById_ShouldReturnNotFound_WhenUserDoesNotExist() throws Exception {
+        // Arrange
+        doThrow(new com.thelazydaniel.taskflow.user.exception.UserIdNotFoundException(999L))
+                .when(userService).deleteUserById(999L);
+
+        mockMvc.perform(delete("/users/999"))
+                .andExpect(status().isNotFound());
     }
 }

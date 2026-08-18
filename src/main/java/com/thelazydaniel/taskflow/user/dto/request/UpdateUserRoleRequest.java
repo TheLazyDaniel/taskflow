@@ -9,5 +9,5 @@ public record UpdateUserRoleRequest(
                 regexp = "^(USER|ADMIN|MANAGER)$",
                 message = "ROLE must be USER, ADMIN, or MANAGER"
         )
-        String Role
+        String role
 ){}
