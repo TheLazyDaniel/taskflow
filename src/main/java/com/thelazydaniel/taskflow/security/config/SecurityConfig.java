@@ -32,30 +32,32 @@ public class SecurityConfig {
     public SecurityFilterChain SecurityFilterChain(
             HttpSecurity http,
             JwtAuthenticationFilter jwtAuthenticationFilter,
-            JwtAuthEntryPoint jwtAuthEntryPoint)  {
+            JwtAuthEntryPoint jwtAuthEntryPoint,
+            AuthenticationProvider authenticationProvider) {
         http
-            .cors(cors -> cors.disable())
-            .csrf(csrf -> csrf.disable())
+                .cors(cors -> cors.disable())
+                .csrf(csrf -> csrf.disable())
 
                 .exceptionHandling(exception -> exception
-                .authenticationEntryPoint(jwtAuthEntryPoint)
-            )
-            .sessionManagement(session ->
-                    session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                        .authenticationEntryPoint(jwtAuthEntryPoint)
+                )
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-            .authorizeHttpRequests(authorize -> authorize
-                .requestMatchers("/users/register","/users/login").permitAll()
-                .anyRequest().authenticated()
-            )
+                .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers("/users/register", "/users/login").permitAll()
+                        .anyRequest().authenticated()
+                )
 
-            .logout(logout -> logout
-                .logoutUrl("/logout")
-                .deleteCookies("JSESSIONID")
-                .clearAuthentication(true)
-                .permitAll()
-            )
-            .addFilterBefore(jwtAuthenticationFilter,
-                    UsernamePasswordAuthenticationFilter.class);
+                .logout(logout -> logout
+                        .logoutUrl("/logout")
+                        .deleteCookies("JSESSIONID")
+                        .clearAuthentication(true)
+                        .permitAll()
+                )
+                .authenticationProvider(authenticationProvider)
+                .addFilterBefore(jwtAuthenticationFilter,
+                        UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 
@@ -77,30 +79,6 @@ public class SecurityConfig {
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
-
-
-//    @Bean
-//    public UserDetailsService userDetailsService() {
-//        UserDetails user = User.builder()
-//                .username("user")
-//                .password(passwordEncoder.encode("user123"))
-//                .roles(UserRole.USER.name())
-//                .build();
-//
-//        UserDetails manager = User.builder()
-//                .username("manager")
-//                .password(passwordEncoder.encode("manager123"))
-//                .roles(UserRole.MANAGER.name())
-//                .build();
-//
-//        UserDetails admin = User.builder()
-//                .username("admin")
-//                .password(passwordEncoder.encode("admin123"))
-//                .roles(UserRole.ADMIN.name())
-//                .build();
-//
-//        return new InMemoryUserDetailsManager(user, manager, admin);
-//    }
 
 
 }
