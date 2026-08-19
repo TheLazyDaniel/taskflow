@@ -63,7 +63,6 @@ public interface UserMapper {
 
     default Boolean mapEnabled(User user) {
         UserRole currentRole = SecurityUtils.getCurrentUserRole();
-        boolean isOwnProfile = SecurityUtils.getCurrentUserId() == user.getId();
 
         // Admins
         if (currentRole == UserRole.ADMIN) {
@@ -74,7 +73,6 @@ public interface UserMapper {
 
     default Boolean mapAccountNonLocked(User user) {
         UserRole currentRole = SecurityUtils.getCurrentUserRole();
-        boolean isOwnProfile = SecurityUtils.getCurrentUserId() == user.getId();
 
         if (currentRole == UserRole.ADMIN) {
             return user.isAccountNonLocked();
