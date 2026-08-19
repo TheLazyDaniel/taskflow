@@ -1,7 +1,6 @@
 package com.thelazydaniel.taskflow.user.dto.request;
 
 import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
@@ -20,6 +19,9 @@ public record UpdateUserRequest(
         String lastName
 ) {
         public boolean hasAnyField() {
-                return username != null || email != null || firstName != null || lastName != null;
+                return (username != null && !username.isBlank()) ||
+                        (email != null && !email.isBlank()) ||
+                        (firstName != null && !firstName.isBlank()) ||
+                        (lastName != null && !lastName.isBlank());
         }
 }

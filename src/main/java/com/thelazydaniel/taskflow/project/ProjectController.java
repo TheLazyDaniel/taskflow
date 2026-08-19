@@ -5,11 +5,9 @@ import com.thelazydaniel.taskflow.common.dto.response.PageResponse;
 import com.thelazydaniel.taskflow.project.dto.request.CreateProjectRequest;
 import com.thelazydaniel.taskflow.project.dto.response.ProjectResponse;
 import com.thelazydaniel.taskflow.project.dto.response.ProjectSummaryResponse;
-import com.thelazydaniel.taskflow.user.dto.response.UserSummaryResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 

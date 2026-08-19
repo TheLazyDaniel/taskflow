@@ -19,13 +19,13 @@ public class SecurityUtils {
         }
 
         Object principal = authentication.getPrincipal();
-        if (principal instanceof SecurityUser) {
-            return ((SecurityUser) principal).getUser();
-        } else if (principal instanceof User) {
-            return (User) principal;
-        } else {
-            throw new IllegalStateException("Unexpected user principal type: " + principal.getClass().getName());
-        }
+        return switch (principal) {
+            case SecurityUser securityUser -> securityUser.getUser();
+            case User user -> user;
+            case null -> throw new IllegalStateException("User Principal is null.");
+            default ->
+                    throw new IllegalStateException("Unexpected user principal type: " + principal.getClass().getName());
+        };
     }
 
     public static long getCurrentUserId(){
@@ -51,15 +51,13 @@ public class SecurityUtils {
         }
 
         Object principal = authentication.getPrincipal();
-        if (principal instanceof SecurityUser) {
-            return ((SecurityUser) principal).getUser().getRole();
-        } else if (principal instanceof User) {
-            return ((User) principal).getRole();
-        } else if (principal == null) {
-            throw new IllegalStateException("User Principal is null.");
-        } else {
-            throw new IllegalStateException("Unexpected user principal type: " + principal.getClass().getName());
-        }
+        return switch (principal) {
+            case SecurityUser securityUser -> securityUser.getUser().getRole();
+            case User user -> user.getRole();
+            case null -> throw new IllegalStateException("User Principal is null.");
+            default ->
+                    throw new IllegalStateException("Unexpected user principal type: " + principal.getClass().getName());
+        };
     }
 
     public static boolean hasRole(UserRole role) {

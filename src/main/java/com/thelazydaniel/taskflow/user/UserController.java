@@ -1,12 +1,10 @@
 package com.thelazydaniel.taskflow.user;
 
 
-import com.thelazydaniel.taskflow.common.util.SecurityUtils;
 import com.thelazydaniel.taskflow.common.dto.request.PageRequest;
 import com.thelazydaniel.taskflow.user.dto.request.UpdateUserRequest;
 import com.thelazydaniel.taskflow.user.dto.request.UpdateUserRoleRequest;
 import com.thelazydaniel.taskflow.common.dto.response.PageResponse;
-import com.thelazydaniel.taskflow.user.dto.response.UserAdminResponse;
 import com.thelazydaniel.taskflow.user.dto.response.UserResponse;
 import com.thelazydaniel.taskflow.user.dto.response.UserSummaryResponse;
 import jakarta.validation.Valid;
@@ -34,7 +32,6 @@ public class UserController {
     @PutMapping(value = "/me")
     public ResponseEntity<UserResponse> updateCurrentUser(
             @Valid @RequestBody UpdateUserRequest updateUserRequest) {
-        long id = SecurityUtils.getCurrentUserId();
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(userService.updateSelf(updateUserRequest));
