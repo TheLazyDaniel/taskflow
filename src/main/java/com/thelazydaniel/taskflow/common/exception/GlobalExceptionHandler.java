@@ -2,9 +2,12 @@ package com.thelazydaniel.taskflow.common.exception;
 
 import com.thelazydaniel.taskflow.auth.dto.response.ValidationErrorResponse;
 import com.thelazydaniel.taskflow.common.dto.response.ErrorResponse;
+import com.thelazydaniel.taskflow.project.exception.ProjectAccessDeniedException;
+import com.thelazydaniel.taskflow.project.exception.ProjectArchivedException;
+import com.thelazydaniel.taskflow.project.exception.ProjectDeletedException;
+import com.thelazydaniel.taskflow.project.exception.ProjectIdNotFoundException;
 import com.thelazydaniel.taskflow.user.exception.UserIdNotFoundException;
 import com.thelazydaniel.taskflow.user.exception.UserNameNotFoundException;
-import com.thelazydaniel.taskflow.user.exception.unknownUserRoleException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -94,31 +97,12 @@ public class GlobalExceptionHandler {
                 .body(errorResponse);
     }
 
-    @ExceptionHandler(unknownUserRoleException.class)
-    public ResponseEntity<ErrorResponse> handleUnknownUserRole(
-            unknownUserRoleException e,
-            HttpServletRequest request) {
-
-        log.error("UnknownUserRoleException: ", e);
-
-        ErrorResponse errorResponse = new ErrorResponse(
-                LocalDateTime.now(),
-                HttpStatus.BAD_REQUEST.value(),
-                HttpStatus.BAD_REQUEST.getReasonPhrase(),
-                e.getMessage(),
-                request.getPathInfo()
-        );
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(errorResponse);
-    }
-
-    @ExceptionHandler(illegalArgumentException.class)
+    @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgumentException(
             IllegalArgumentException e,
             HttpServletRequest request) {
 
-        log.error("illegalArgumentException: ", e);
+        log.error("IllegalArgumentException: ", e);
 
         ErrorResponse errorResponse = new ErrorResponse(
                 LocalDateTime.now(),
@@ -138,6 +122,78 @@ public class GlobalExceptionHandler {
             HttpServletRequest request
     ){
         log.error("AuthorizationDeniedException: ", e);
+        ErrorResponse errorResponse = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.FORBIDDEN.value(),
+                HttpStatus.FORBIDDEN.getReasonPhrase(),
+                e.getMessage(),
+                request.getPathInfo()
+        );
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(errorResponse);
+    }
+
+    @ExceptionHandler(ProjectIdNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleProjectIdNotFoundException(
+            ProjectIdNotFoundException e,
+            HttpServletRequest request
+    ){
+        log.error("ProjectIdNotFoundException: ", e);
+        ErrorResponse errorResponse = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.NOT_FOUND.value(),
+                HttpStatus.NOT_FOUND.getReasonPhrase(),
+                e.getMessage(),
+                request.getPathInfo()
+        );
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(errorResponse);
+    }
+
+    @ExceptionHandler(ProjectArchivedException.class)
+    public ResponseEntity<ErrorResponse> handleProjectArchivedException(
+            ProjectArchivedException e,
+            HttpServletRequest request
+    ){
+        log.error("ProjectArchivedException: ", e);
+        ErrorResponse errorResponse = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.CONFLICT.value(),
+                HttpStatus.CONFLICT.getReasonPhrase(),
+                e.getMessage(),
+                request.getPathInfo()
+        );
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(errorResponse);
+    }
+
+    @ExceptionHandler(ProjectDeletedException.class)
+    public ResponseEntity<ErrorResponse> handleProjectDeletedException(
+            ProjectDeletedException e,
+            HttpServletRequest request
+    ){
+        log.error("ProjectDeletedException: ", e);
+        ErrorResponse errorResponse = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.CONFLICT.value(),
+                HttpStatus.CONFLICT.getReasonPhrase(),
+                e.getMessage(),
+                request.getPathInfo()
+        );
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(errorResponse);
+    }
+
+    @ExceptionHandler(ProjectAccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleProjectAccessDeniedException(
+            ProjectAccessDeniedException e,
+            HttpServletRequest request
+    ){
+        log.error("ProjectAccessDeniedException: ", e);
         ErrorResponse errorResponse = new ErrorResponse(
                 LocalDateTime.now(),
                 HttpStatus.FORBIDDEN.value(),

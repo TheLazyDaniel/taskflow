@@ -1,7 +1,7 @@
 package com.thelazydaniel.taskflow.user.entity;
 
 import com.thelazydaniel.taskflow.common.entity.BaseEntity;
-import com.thelazydaniel.taskflow.project.Project;
+import com.thelazydaniel.taskflow.project.entity.Project;
 import com.thelazydaniel.taskflow.task.entity.Task;
 import com.thelazydaniel.taskflow.user.enums.UserRole;
 import jakarta.persistence.*;

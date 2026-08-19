@@ -28,23 +28,42 @@ public class SecurityUtils {
         }
     }
 
-    public static String getCurrentUsername() {
+    public static long getCurrentUserId(){
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null ||  !authentication.isAuthenticated()) {
             throw new UnauthorizedException("User not authorized");
         }
-        return authentication.getName();
+
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof SecurityUser) {
+            return ((SecurityUser) principal).getUser().getId();
+        } else if (principal == null) {
+            throw new IllegalStateException("User Principal is null.");
+        } else {
+            throw new IllegalStateException("Unexpected user principal type: " + principal.getClass().getName());
+        }
     }
 
-    public static long getCurrentUserId(){
-        return getCurrentUser().getId();
-    }
+    public static UserRole getCurrentUserRole(){
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null ||  !authentication.isAuthenticated()) {
+            throw new UnauthorizedException("User not authorized");
+        }
 
-    public static String getCurrentUserRole(){
-        return String.valueOf(getCurrentUser().getRole());
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof SecurityUser) {
+            return ((SecurityUser) principal).getUser().getRole();
+        } else if (principal instanceof User) {
+            return ((User) principal).getRole();
+        } else if (principal == null) {
+            throw new IllegalStateException("User Principal is null.");
+        } else {
+            throw new IllegalStateException("Unexpected user principal type: " + principal.getClass().getName());
+        }
     }
 
     public static boolean hasRole(UserRole role) {
-        return role == getCurrentUser().getRole();
+        getCurrentUserRole();
+        return false;
     }
 }

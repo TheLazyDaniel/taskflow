@@ -1,4 +1,4 @@
-package com.thelazydaniel.taskflow.project;
+package com.thelazydaniel.taskflow.project.enums;
 
 public enum ProjectStatus {
     ACTIVE,

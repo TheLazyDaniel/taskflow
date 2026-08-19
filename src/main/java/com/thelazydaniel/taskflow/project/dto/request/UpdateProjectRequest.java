@@ -1,6 +1,5 @@
 package com.thelazydaniel.taskflow.project.dto.request;
 
-
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.NotBlank;
@@ -8,22 +7,20 @@ import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
 
-public record CreateProjectRequest(
-        @NotBlank
-        @Size(min = 1, max = 100)
-        String name,
+public record UpdateProjectRequest(
+       @NotBlank
+       @Size(min = 1, max = 100)
+       String name,
 
-        @Size(max = 500)
-        String description,
+       @Size(max = 500)
+       String description,
 
-        @JsonFormat(pattern = "yyyy-MM-dd")
-        LocalDate startDate,
+       @JsonFormat(pattern = "yyyy-MM-dd")
+       LocalDate startDate,
 
-        @Future(message = "End date must be in the future")
-        @JsonFormat(pattern = "yyyy-MM-dd")
-        LocalDate endDate
-
-
+       @Future(message = "End date must be in the future")
+       @JsonFormat(pattern = "yyyy-MM-dd")
+       LocalDate endDate
 ) {
     public void validateDates() {
         if (startDate != null && endDate != null && endDate.isBefore(startDate)) {

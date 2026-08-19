@@ -19,4 +19,7 @@ public record UpdateUserRequest(
 
         String lastName
 ) {
+        public boolean hasAnyField() {
+                return username != null || email != null || firstName != null || lastName != null;
+        }
 }
