@@ -1,7 +1,6 @@
 package com.thelazydaniel.taskflow.task;
 
 import com.thelazydaniel.taskflow.task.entity.Task;
-import jakarta.validation.constraints.NotNull;
 import org.jspecify.annotations.NonNull;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

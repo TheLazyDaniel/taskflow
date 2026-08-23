@@ -6,7 +6,6 @@ import com.thelazydaniel.taskflow.task.enums.TaskPriority;
 import com.thelazydaniel.taskflow.task.enums.TaskStatus;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record TaskSummaryResponse(

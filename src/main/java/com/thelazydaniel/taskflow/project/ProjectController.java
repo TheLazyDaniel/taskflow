@@ -4,7 +4,6 @@ import com.thelazydaniel.taskflow.common.dto.request.PageRequest;
 import com.thelazydaniel.taskflow.common.dto.response.PageResponse;
 import com.thelazydaniel.taskflow.project.dto.request.CreateProjectRequest;
 import com.thelazydaniel.taskflow.project.dto.request.UpdateProjectRequest;
-import com.thelazydaniel.taskflow.project.dto.response.ProjectPublicResponse;
 import com.thelazydaniel.taskflow.project.dto.response.ProjectResponse;
 import com.thelazydaniel.taskflow.project.dto.response.ProjectSummaryResponse;
 import com.thelazydaniel.taskflow.project.service.ProjectService;

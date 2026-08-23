@@ -9,7 +9,6 @@ import com.thelazydaniel.taskflow.user.dto.request.UpdateUserRequest;
 import com.thelazydaniel.taskflow.user.dto.request.UpdateUserRoleRequest;
 import com.thelazydaniel.taskflow.common.dto.response.PageResponse;
 import com.thelazydaniel.taskflow.user.dto.response.UserPublicResponse;
-import com.thelazydaniel.taskflow.user.dto.response.UserPublicSummaryResponse;
 import com.thelazydaniel.taskflow.user.dto.response.UserResponse;
 import com.thelazydaniel.taskflow.user.dto.response.UserSummaryResponse;
 import com.thelazydaniel.taskflow.user.entity.User;

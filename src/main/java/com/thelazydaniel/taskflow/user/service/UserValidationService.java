@@ -4,7 +4,6 @@ package com.thelazydaniel.taskflow.user.service;
 import com.thelazydaniel.taskflow.common.exception.IllegalArgumentException;
 import com.thelazydaniel.taskflow.user.UserRepository;
 import com.thelazydaniel.taskflow.user.entity.User;
-import com.thelazydaniel.taskflow.user.enums.UserRole;
 import com.thelazydaniel.taskflow.user.exception.UserIdNotFoundException;
 import com.thelazydaniel.taskflow.user.exception.UserNameNotFoundException;
 import org.springframework.stereotype.Service;
