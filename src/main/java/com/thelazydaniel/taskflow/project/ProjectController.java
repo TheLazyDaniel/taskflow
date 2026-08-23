@@ -3,8 +3,12 @@ package com.thelazydaniel.taskflow.project;
 import com.thelazydaniel.taskflow.common.dto.request.PageRequest;
 import com.thelazydaniel.taskflow.common.dto.response.PageResponse;
 import com.thelazydaniel.taskflow.project.dto.request.CreateProjectRequest;
+import com.thelazydaniel.taskflow.project.dto.request.UpdateProjectRequest;
+import com.thelazydaniel.taskflow.project.dto.response.ProjectPublicResponse;
 import com.thelazydaniel.taskflow.project.dto.response.ProjectResponse;
 import com.thelazydaniel.taskflow.project.dto.response.ProjectSummaryResponse;
+import com.thelazydaniel.taskflow.project.service.ProjectService;
+import com.thelazydaniel.taskflow.task.dto.response.TaskSummaryResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -43,6 +47,16 @@ public class ProjectController {
                 .body(projectService.findProjectById(id));
     }
 
+    @PutMapping(value = "/{id}")
+    public ResponseEntity<ProjectResponse> updateProjectById(
+            @Valid @RequestBody UpdateProjectRequest updateProjectRequest,
+            @PathVariable long id){
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(projectService.updateProject(updateProjectRequest,id));
+    }
+
+
     @DeleteMapping(value = "/{id}")
     public ResponseEntity<ProjectResponse> deleteProjectById(@PathVariable long id){
         return ResponseEntity
@@ -64,5 +78,12 @@ public class ProjectController {
                 .body(projectService.restoreProject(id));
     }
 
-   //implement later: GET    /api/projects/{id}/tasks  - Get all tasks for a project
+    @GetMapping(value = "/{id}/tasks")
+    public ResponseEntity<PageResponse<TaskSummaryResponse>> getTasksByProjectId(
+            @Valid PageRequest pageRequest,
+            @PathVariable long id){
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(projectService.findAllRelatedTasks(pageRequest,id));
+    }
 }

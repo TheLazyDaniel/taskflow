@@ -7,15 +7,13 @@ import jakarta.validation.constraints.*;
 
 import java.time.LocalDate;
 
-public record CreateTaskRequest(
-        @NotBlank(message = "Title cannot be blank")
-        @Size(max = 200, message = "Title cannot have more than 200 characters")
+public record UpdateTaskRequest(
+        @Size(max = 200, message = "Title cannot be longer than 200 characters")
         String title,
 
         @Size(max = 2000, message = "Description cannot be longer than 2000 characters")
         String description,
 
-        @NotNull(message = "Priority is required")
         @Pattern(
                 regexp = "^(LOW|MEDIUM|HIGH|CRITICAL)$",
                 message = "Priority must be LOW, MEDIUM, HIGH or CRITICAL"
@@ -25,13 +23,6 @@ public record CreateTaskRequest(
         @ValidDateFormat(pattern = "yyyy-MM-dd", message = "Invalid end date format. Expected: yyyy-MM-dd")
         @JsonFormat(pattern = "yyyy-MM-dd")
         @Future(message = "Due date must be in the future")
-        LocalDate dueDate,
-
-        @Min(value = 1, message = "Assignee ID must be a positive number")
-        Long assigneeId,
-
-        @NotBlank(message = "Assignee ID is required")
-        @Min(value = 1, message = "Assignee ID must be a positive number")
-        Long projectId
+        LocalDate dueDate
 ) {
 }

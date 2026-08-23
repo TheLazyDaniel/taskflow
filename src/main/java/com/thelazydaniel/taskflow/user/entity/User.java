@@ -1,8 +1,6 @@
 package com.thelazydaniel.taskflow.user.entity;
 
 import com.thelazydaniel.taskflow.common.entity.BaseEntity;
-import com.thelazydaniel.taskflow.project.entity.Project;
-import com.thelazydaniel.taskflow.task.entity.Task;
 import com.thelazydaniel.taskflow.user.enums.UserRole;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
@@ -13,7 +11,6 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @EqualsAndHashCode(callSuper = true)
 @Entity
@@ -47,55 +44,11 @@ public class User extends BaseEntity {
     @Column(nullable = false)
     private UserRole role;
 
-    @OneToMany(mappedBy = "owner",
-            fetch = FetchType.LAZY,
-            cascade = {CascadeType.PERSIST,CascadeType.MERGE})
-    private List<Project> ownedProjects;
-
-    @OneToMany(mappedBy = "assignee",
-            fetch = FetchType.LAZY,
-            cascade = {CascadeType.PERSIST,CascadeType.MERGE})
-    private List<Task> workingTasks;
-
-    @OneToMany(mappedBy = "reporter",
-            fetch = FetchType.LAZY,
-            cascade = {CascadeType.PERSIST,CascadeType.MERGE})
-    private List<Task> createdTasks;
-
     private boolean enabled = true;
 
     private boolean accountNonLocked = true;
 
     private LocalDateTime lastLoginDate;
 
-    public void addProject(Project project){
-        this.ownedProjects.add(project);
-        project.setOwner(this);
-    }
-
-    public void removeProject(Project project){
-        this.ownedProjects.remove(project);
-        project.setOwner(null);
-    }
-
-    public void addWorkingTask(Task task){
-        this.workingTasks.add(task);
-        task.setAssignee(this);
-    }
-
-    public void removeWorkingTask(Task task){
-        this.workingTasks.remove(task);
-        task.setAssignee(null);
-    }
-
-    public void addCreatedTask(Task task){
-        this.createdTasks.add(task);
-        task.setAssignee(this);
-    }
-
-    public void removeCreatedTask(Task task){
-        this.createdTasks.remove(task);
-        task.setAssignee(null);
-    }
 
 }

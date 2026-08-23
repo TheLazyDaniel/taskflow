@@ -15,13 +15,13 @@ import org.springframework.data.domain.Pageable;
 @NoArgsConstructor
 public class PageRequest {
         @NotNull
-        @Min(value = 0, message = "Page have to be larger than 0")
-        private int page;
+        @Min(value = 0, message = "Page has to be larger than 0")
+        private Integer page;
 
         @NotNull
-        @Min(value = 1, message = "Size have to be larger than 0.")
-        @Max(value = 100, message = "Size have to be at most 100.")
-        private int size;
+        @Min(value = 1, message = "Size has to be larger than 0.")
+        @Max(value = 100, message = "Size has to be at most 100.")
+        private Integer size;
 
         private String sortBy = "id";
 

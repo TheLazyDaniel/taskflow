@@ -5,7 +5,7 @@ import com.thelazydaniel.taskflow.common.util.SecurityUtils;
 import com.thelazydaniel.taskflow.project.dto.request.CreateProjectRequest;
 import com.thelazydaniel.taskflow.project.dto.request.UpdateProjectRequest;
 import com.thelazydaniel.taskflow.project.dto.response.ProjectSummaryResponse;
-import com.thelazydaniel.taskflow.project.dto.response.ProjectResponse;
+
 import com.thelazydaniel.taskflow.project.entity.Project;
 import com.thelazydaniel.taskflow.user.enums.UserRole;
 import org.mapstruct.*;
@@ -21,26 +21,14 @@ public interface ProjectMapper {
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     void updateEntity(UpdateProjectRequest request, @MappingTarget Project project);
 
-//    @Mapping(target = "id", source = "id")
-//    @Mapping(target = "name", source = "name")
-//    @Mapping(target = "status", source = "status")
-//    @Mapping(target = "startDate", source = "startDate")
-//    @Mapping(target = "endDate", source = "endDate")
-    @Mapping(target = "ownerId", expression = "java(project.getOwnerId())")
-    ProjectSummaryResponse toProjectSummaryResponse(Project project);
-
     @Mapping(target = "id", source = "id")
     @Mapping(target = "name", source = "name")
-    @Mapping(target = "description", source = "description")
     @Mapping(target = "status", source = "status")
-    @Mapping(target = "createdDate", source = "createdDate")
-    @Mapping(target = "updatedDate",
-            expression = "java(mapUpdatedDate(project))")
     @Mapping(target = "startDate", source = "startDate")
     @Mapping(target = "endDate", source = "endDate")
-    @Mapping(target = "ownerId", expression = "java(project.getOwnerId())")
-    @Mapping(target = "ownerName", expression = "java(project.getOwnerName())")
-    ProjectResponse toProjectResponse(Project project);
+    @Mapping(target = "ownerId", source = "ownerId")
+    ProjectSummaryResponse toProjectSummaryResponse(Project project);
+
 
     default LocalDateTime mapUpdatedDate(Project project) {
         UserRole currentRole = SecurityUtils.getCurrentUserRole();

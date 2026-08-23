@@ -1,12 +1,15 @@
-package com.thelazydaniel.taskflow.user;
+package com.thelazydaniel.taskflow.user.service;
 
 import com.thelazydaniel.taskflow.common.util.SecurityUtils;
+import com.thelazydaniel.taskflow.user.UserRepository;
 import com.thelazydaniel.taskflow.user.dto.mapper.UserMapper;
 import com.thelazydaniel.taskflow.auth.dto.request.RegisterRequest;
 import com.thelazydaniel.taskflow.common.dto.request.PageRequest;
 import com.thelazydaniel.taskflow.user.dto.request.UpdateUserRequest;
 import com.thelazydaniel.taskflow.user.dto.request.UpdateUserRoleRequest;
 import com.thelazydaniel.taskflow.common.dto.response.PageResponse;
+import com.thelazydaniel.taskflow.user.dto.response.UserPublicResponse;
+import com.thelazydaniel.taskflow.user.dto.response.UserPublicSummaryResponse;
 import com.thelazydaniel.taskflow.user.dto.response.UserResponse;
 import com.thelazydaniel.taskflow.user.dto.response.UserSummaryResponse;
 import com.thelazydaniel.taskflow.user.entity.User;
@@ -27,30 +30,31 @@ import org.springframework.stereotype.Service;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final UserValidationService userValidationService;
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository userRepository, UserMapper userMapper, PasswordEncoder passwordEncoder) {
+    public UserService(UserRepository userRepository,
+                       UserValidationService userValidationService,
+                       UserMapper userMapper,
+                       PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.userValidationService = userValidationService;
         this.userMapper = userMapper;
         this.passwordEncoder = passwordEncoder;
     }
 
     @Transactional
-    public UserResponse registerUser(RegisterRequest registerRequest) {
-        if (userRepository.existsByUsername(registerRequest.username())){
-            throw new IllegalArgumentException("Username already exists");
-        }
-        if (userRepository.existsByEmail(registerRequest.email())){
-            throw new IllegalArgumentException("Email already exists");
-        }
+    public UserPublicResponse registerUser(RegisterRequest registerRequest) {
+        userValidationService.validateUsernameExistence(registerRequest.username());
+        userValidationService.validateEmailExistence(registerRequest.email());
         String hashedPassword = passwordEncoder.encode(registerRequest.password());
         User user = userMapper.toEntity(registerRequest);
         user.setPasswordHash(hashedPassword);
         user.setRole(UserRole.USER);
         //default
         User savedUser = userRepository.save(user);
-        return userMapper.toUserResponse(savedUser);
+        return userMapper.toUserPublicResponse(savedUser);
     }
 
     @Transactional
@@ -58,18 +62,13 @@ public class UserService {
         if (!updateUserRequest.hasAnyField()) {
             throw new IllegalArgumentException("At least one field must be provided for update");
         }
-        if (userRepository.existsByUsername(updateUserRequest.username())){
-            throw new IllegalArgumentException("Username already exists");
-        }
-        if (userRepository.existsByEmail(updateUserRequest.email())){
-            throw new IllegalArgumentException("Email already exists");
-        }
+        userValidationService.validateUsernameExistence(updateUserRequest.username());
+        userValidationService.validateEmailExistence(updateUserRequest.email());
 
-        User user = userRepository.findById(id)
-                .orElseThrow(()-> new UserIdNotFoundException(id));
+        User user = userValidationService.validateAndGetUser(id);
         userMapper.updateEntity(updateUserRequest, user);
         User updatedUser = userRepository.save(user);
-        return userMapper.toUserResponse(updatedUser);
+        return userMapper.toResponse(updatedUser);
     }
 
     @Transactional
@@ -80,34 +79,29 @@ public class UserService {
         }
 
         if (updateUserRequest.username() != null && !updateUserRequest.username().equals(currentUser.getUsername())) {
-            if (userRepository.existsByUsername(updateUserRequest.username())) {
-                throw new IllegalArgumentException("Username '" + updateUserRequest.username() + "' is already taken");
-            }
+            userValidationService.validateUsernameExistence(updateUserRequest.username());
             currentUser.setUsername(updateUserRequest.username());
         }
 
         if (updateUserRequest.email() != null && !updateUserRequest.email().equals(currentUser.getEmail())) {
-            if (userRepository.existsByEmail(updateUserRequest.email())) {
-                throw new IllegalArgumentException("Email '" + updateUserRequest.email() + "' is already in use");
-            }
+            userValidationService.validateEmailExistence(updateUserRequest.email());
             currentUser.setEmail(updateUserRequest.email());
         }
         userMapper.updateEntity(updateUserRequest,currentUser);
-        userRepository.save(currentUser);
-        return userMapper.toUserResponse(currentUser);
+        User updatedUser = userRepository.save(currentUser);
+        return userMapper.toResponse(updatedUser);
     }
 
     @Transactional(readOnly = true)
     public UserResponse findUserById(long id){
-        User user =  userRepository.findById(id)
-                .orElseThrow(()-> new UserIdNotFoundException(id));
-        return userMapper.toUserResponse(user);
+        User user = userValidationService.validateAndGetUser(id);
+        return userMapper.toResponse(user);
     }
 
     @Transactional(readOnly = true)
     public UserResponse findSelf(){
         User currentUser = SecurityUtils.getCurrentUser();
-        return userMapper.toUserResponse(currentUser);
+        return userMapper.toResponse(currentUser);
     }
 
     @Transactional
@@ -117,21 +111,20 @@ public class UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UserIdNotFoundException(id));
         user.setRole(UserRole.valueOf(updateUserRoleRequest.role()));
-        userRepository.save(user);
-        return userMapper.toUserResponse(user);
+        User updatedUser = userRepository.save(user);
+        return userMapper.toResponse(updatedUser);
     }
 
     @Transactional(readOnly = true)
     public PageResponse<UserSummaryResponse> getAllUsers(PageRequest request){
         Pageable pageable = request.toPageable();
         Page<User> users = userRepository.findAll(pageable);
-        return PageResponse.from(users, userMapper::toUserSummaryResponse);
+        return PageResponse.from(users, userMapper::toSummaryResponse);
     }
 
     @Transactional
     public void deleteUserById(long id) {
-        User user =  userRepository.findById(id)
-                .orElseThrow(() -> new UserIdNotFoundException(id));
+        User user = userValidationService.validateAndGetUser(id);
         userRepository.delete(user);
     }
 

@@ -2,25 +2,30 @@ package com.thelazydaniel.taskflow.project.dto.request;
 
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.thelazydaniel.taskflow.common.validation.ValidDateFormat;
 import jakarta.validation.constraints.Future;
+import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
 
 public record CreateProjectRequest(
-        @NotBlank
-        @Size(min = 1, max = 100)
+        @NotBlank(message = "Project name cannot be blank.")
+        @Size(min = 1, max = 100, message = "Project name length must be between 1 and 100.")
         String name,
 
         @Size(max = 500)
         String description,
 
+        @FutureOrPresent(message = "Start date must be in present or the future.")
+        @ValidDateFormat(pattern = "yyyy-MM-dd", message = "Invalid end date format. Expected: yyyy-MM-dd")
         @JsonFormat(pattern = "yyyy-MM-dd")
         LocalDate startDate,
 
-        @Future(message = "End date must be in the future")
+        @Future(message = "End date must be in the future.")
         @JsonFormat(pattern = "yyyy-MM-dd")
+        @ValidDateFormat(pattern = "yyyy-MM-dd", message = "Invalid end date format. Expected: yyyy-MM-dd")
         LocalDate endDate
 
 

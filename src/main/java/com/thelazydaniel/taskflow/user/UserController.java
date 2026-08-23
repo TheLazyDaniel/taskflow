@@ -7,6 +7,7 @@ import com.thelazydaniel.taskflow.user.dto.request.UpdateUserRoleRequest;
 import com.thelazydaniel.taskflow.common.dto.response.PageResponse;
 import com.thelazydaniel.taskflow.user.dto.response.UserResponse;
 import com.thelazydaniel.taskflow.user.dto.response.UserSummaryResponse;
+import com.thelazydaniel.taskflow.user.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -72,8 +73,5 @@ public class UserController {
         userService.deleteUserById(id);
         return ResponseEntity.noContent().build();
     }
-
-
-
 
 }

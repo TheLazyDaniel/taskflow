@@ -6,7 +6,7 @@ import com.thelazydaniel.taskflow.security.entry.JwtAuthEntryPoint;
 
 import com.thelazydaniel.taskflow.user.entity.User;
 import com.thelazydaniel.taskflow.user.enums.UserRole;
-import com.thelazydaniel.taskflow.user.UserService;
+import com.thelazydaniel.taskflow.user.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

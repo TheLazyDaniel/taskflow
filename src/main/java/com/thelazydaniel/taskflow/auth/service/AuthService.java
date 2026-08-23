@@ -1,12 +1,21 @@
 package com.thelazydaniel.taskflow.auth.service;
 
+import com.thelazydaniel.taskflow.auth.dto.request.RefreshTokenRequest;
 import com.thelazydaniel.taskflow.auth.dto.response.JwtResponse;
+import com.thelazydaniel.taskflow.auth.dto.response.TokenRefreshResponse;
+import com.thelazydaniel.taskflow.auth.exception.InvalidRefreshTokenException;
+import com.thelazydaniel.taskflow.auth.exception.RefreshTokenExpiredException;
 import com.thelazydaniel.taskflow.security.jwt.JwtTokenProvider;
+import com.thelazydaniel.taskflow.user.service.UserValidationService;
+import io.jsonwebtoken.JwtException;
 import lombok.extern.slf4j.Slf4j;
+import org.antlr.v4.runtime.Token;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
@@ -21,9 +30,12 @@ public class AuthService {
 
     private final JwtTokenProvider jwtTokenProvider;
 
-    public AuthService(AuthenticationManager authenticationManager, JwtTokenProvider jwtTokenProvider) {
+    private final UserValidationService userValidationService;
+
+    public AuthService(AuthenticationManager authenticationManager, JwtTokenProvider jwtTokenProvider, UserValidationService userValidationService) {
         this.authenticationManager = authenticationManager;
         this.jwtTokenProvider = jwtTokenProvider;
+        this.userValidationService = userValidationService;
     }
 
     public JwtResponse authenticateUser(String username, String password) {
@@ -65,5 +77,32 @@ public class AuthService {
                 .username(userDetails.getUsername())
                 .roles(roles)
                 .build();
+    }
+
+    public TokenRefreshResponse refreshToken(RefreshTokenRequest refreshTokenRequest) {
+        String refreshToken = refreshTokenRequest.refreshToken();
+        if (jwtTokenProvider.isTokenExpired(refreshToken)){
+            throw new RefreshTokenExpiredException("Refresh token has expired. Please login again.");
+        }
+        if (!jwtTokenProvider.validateToken(refreshToken)){
+            throw new InvalidRefreshTokenException("Invalid refresh token");
+        }
+        try {
+            String username = jwtTokenProvider.getUsernameFromToken(refreshToken);
+            List<String> roles = userValidationService.getUserRolesFromUsername(username);
+            String newAccessToken = jwtTokenProvider.generateTokenFromUsername(
+                    username,
+                    roles
+            );
+            String newRefreshToken = jwtTokenProvider.generateRefreshToken(username);
+            return new TokenRefreshResponse(newAccessToken, newRefreshToken, "Bearer");
+        } catch (JwtException | IllegalArgumentException e){
+            throw new InvalidRefreshTokenException("Invalid refresh token: " + e.getMessage());
+        }
+    }
+
+    public String userLogout(){
+        SecurityContextHolder.clearContext();
+        return "logout successful";
     }
 }

@@ -28,6 +28,22 @@ public class SecurityUtils {
         };
     }
 
+    public static String getCurrentUsername(){
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null ||  !authentication.isAuthenticated()) {
+            throw new UnauthorizedException("User not authorized");
+        }
+
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof SecurityUser) {
+            return ((SecurityUser) principal).getUser().getUsername();
+        } else if (principal == null) {
+            throw new IllegalStateException("User Principal is null.");
+        } else {
+            throw new IllegalStateException("Unexpected user principal type: " + principal.getClass().getName());
+        }
+    }
+
     public static long getCurrentUserId(){
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null ||  !authentication.isAuthenticated()) {

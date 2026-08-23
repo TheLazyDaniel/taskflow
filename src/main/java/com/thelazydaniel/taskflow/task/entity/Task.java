@@ -1,6 +1,7 @@
 package com.thelazydaniel.taskflow.task.entity;
 
 import com.thelazydaniel.taskflow.common.entity.BaseEntity;
+import com.thelazydaniel.taskflow.project.entity.Project;
 import com.thelazydaniel.taskflow.task.enums.TaskPriority;
 import com.thelazydaniel.taskflow.task.enums.TaskStatus;
 import com.thelazydaniel.taskflow.user.entity.User;
@@ -18,6 +19,7 @@ import java.time.LocalDate;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Table(name = "tasks")
 public class Task extends BaseEntity {
     @Column(length = 200, nullable = false)
     @Size(max = 200)
@@ -38,10 +40,24 @@ public class Task extends BaseEntity {
     private LocalDate dueDate;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "assignee_id", nullable = false)
+    @JoinColumn(name = "assignee_id", insertable = false, updatable = false)
     private User assignee;
 
+    @Column(name = "assignee_id")
+    private Long assigneeId;
+
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "reporter_id", nullable = false)
+    @JoinColumn(name = "reporter_id", insertable = false, updatable = false)
     private User reporter;
+
+    @Column(name = "reporter_id",nullable = false)
+    private Long reporterId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "project_id", insertable = false, updatable = false)
+    private Project project;
+
+    @Column(name = "project_id",nullable = false)
+    private Long projectId;
+
 }
