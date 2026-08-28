@@ -1,6 +1,6 @@
 package com.thelazydaniel.taskflow.user.service;
 
-import com.thelazydaniel.taskflow.common.util.SecurityUtils;
+
 import com.thelazydaniel.taskflow.user.UserRepository;
 import com.thelazydaniel.taskflow.user.dto.mapper.UserMapper;
 import com.thelazydaniel.taskflow.auth.dto.request.RegisterRequest;
@@ -15,9 +15,7 @@ import com.thelazydaniel.taskflow.user.entity.User;
 import com.thelazydaniel.taskflow.user.enums.UserRole;
 import com.thelazydaniel.taskflow.user.exception.UserIdNotFoundException;
 import com.thelazydaniel.taskflow.common.exception.IllegalArgumentException;
-
-
-
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +24,7 @@ import org.springframework.stereotype.Service;
 
 
 @Service
+@Slf4j
 public class UserService {
 
     private final UserRepository userRepository;
@@ -45,6 +44,7 @@ public class UserService {
 
     @Transactional
     public UserPublicResponse registerUser(RegisterRequest registerRequest) {
+        log.info("Registering user: username={}", registerRequest.username());
         userValidationService.validateUsernameExistence(registerRequest.username());
         userValidationService.validateEmailExistence(registerRequest.email());
         String hashedPassword = passwordEncoder.encode(registerRequest.password());
@@ -53,11 +53,13 @@ public class UserService {
         user.setRole(UserRole.USER);
         //default
         User savedUser = userRepository.save(user);
+        log.info("User registered: userId={}, username={}", savedUser.getId(), savedUser.getUsername());
         return userMapper.toUserPublicResponse(savedUser);
     }
 
     @Transactional
     public UserResponse updateUser(UpdateUserRequest updateUserRequest, long id) {
+        log.info("Updating user: userId={}", id);
         if (!updateUserRequest.hasAnyField()) {
             throw new IllegalArgumentException("At least one field must be provided for update");
         }
@@ -72,7 +74,8 @@ public class UserService {
 
     @Transactional
     public UserResponse updateSelf(UpdateUserRequest updateUserRequest){
-        User currentUser = SecurityUtils.getCurrentUser();
+        User currentUser = userValidationService.getCurrentUser();
+        log.info("Updating current user: userId={}", currentUser.getId());
         if (!updateUserRequest.hasAnyField()) {
             throw new IllegalArgumentException("At least one field must be provided for update");
         }
@@ -93,13 +96,15 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public UserResponse findUserById(long id){
+        log.debug("Finding user: userId={}", id);
         User user = userValidationService.validateAndGetUser(id);
         return userMapper.toResponse(user);
     }
 
     @Transactional(readOnly = true)
     public UserResponse findSelf(){
-        User currentUser = SecurityUtils.getCurrentUser();
+        User currentUser = userValidationService.getCurrentUser();
+        log.debug("Finding current user: userId={}", currentUser.getId());
         return userMapper.toResponse(currentUser);
     }
 
@@ -107,6 +112,7 @@ public class UserService {
     public UserResponse updateUserRole(
             long id,
             UpdateUserRoleRequest updateUserRoleRequest){
+        log.info("Updating user role: userId={}, role={}", id, updateUserRoleRequest.role());
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UserIdNotFoundException(id));
         user.setRole(UserRole.valueOf(updateUserRoleRequest.role()));
@@ -116,6 +122,7 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public PageResponse<UserSummaryResponse> getAllUsers(PageRequest request){
+        log.debug("Finding all users: page={}, size={}", request.page(), request.size());
         Pageable pageable = request.toPageable();
         Page<User> users = userRepository.findAll(pageable);
         return PageResponse.from(users, userMapper::toSummaryResponse);
@@ -123,6 +130,7 @@ public class UserService {
 
     @Transactional
     public void deleteUserById(long id) {
+        log.info("Deleting user: userId={}", id);
         User user = userValidationService.validateAndGetUser(id);
         userRepository.delete(user);
     }

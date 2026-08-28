@@ -77,7 +77,11 @@ public class SecurityUtils {
     }
 
     public static boolean hasRole(UserRole role) {
-        getCurrentUserRole();
-        return false;
+        return getCurrentUserRole().equals(role);
+    }
+
+    public static boolean hasRole(String role) {
+        UserRole targetRole = UserRole.valueOf(role);
+        return getCurrentUserRole().equals(targetRole);
     }
 }

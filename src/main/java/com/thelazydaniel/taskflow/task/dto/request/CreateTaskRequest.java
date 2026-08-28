@@ -1,7 +1,7 @@
 package com.thelazydaniel.taskflow.task.dto.request;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.thelazydaniel.taskflow.common.validation.ValidDateFormat;
+
 import com.thelazydaniel.taskflow.task.enums.TaskPriority;
 import jakarta.validation.constraints.*;
 
@@ -16,13 +16,9 @@ public record CreateTaskRequest(
         String description,
 
         @NotNull(message = "Priority is required")
-        @Pattern(
-                regexp = "^(LOW|MEDIUM|HIGH|CRITICAL)$",
-                message = "Priority must be LOW, MEDIUM, HIGH or CRITICAL"
-        )
         TaskPriority priority,
 
-        @ValidDateFormat(pattern = "yyyy-MM-dd", message = "Invalid end date format. Expected: yyyy-MM-dd")
+
         @JsonFormat(pattern = "yyyy-MM-dd")
         @Future(message = "Due date must be in the future")
         LocalDate dueDate,
@@ -30,8 +26,8 @@ public record CreateTaskRequest(
         @Min(value = 1, message = "Assignee ID must be a positive number")
         Long assigneeId,
 
-        @NotBlank(message = "Assignee ID is required")
-        @Min(value = 1, message = "Assignee ID must be a positive number")
+        @NotNull(message = "Project ID is required")
+        @Min(value = 1, message = "Project ID must be a positive number")
         Long projectId
 ) {
 }

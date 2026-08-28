@@ -1,12 +1,11 @@
 package com.thelazydaniel.taskflow.common.exception;
 
-import com.thelazydaniel.taskflow.auth.dto.response.ValidationErrorResponse;
+import com.thelazydaniel.taskflow.common.dto.response.ValidationErrorResponse;
 import com.thelazydaniel.taskflow.auth.exception.*;
 import com.thelazydaniel.taskflow.common.dto.response.ErrorResponse;
 import com.thelazydaniel.taskflow.common.util.SecurityUtils;
 import com.thelazydaniel.taskflow.project.exception.*;
-import com.thelazydaniel.taskflow.task.exception.TaskAssigneeConflictException;
-import com.thelazydaniel.taskflow.task.exception.TaskIdNotFoundException;
+import com.thelazydaniel.taskflow.task.exception.*;
 import com.thelazydaniel.taskflow.user.exception.UserIdNotFoundException;
 import com.thelazydaniel.taskflow.user.exception.UserNameNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -15,6 +14,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -66,10 +68,24 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleHttpMessageNotReadable(
             HttpMessageNotReadableException e,
             HttpServletRequest request) {
+        String message;
+        if (e.getMessage().contains("java.time.LocalDate")) {
+            message = "Invalid date format. Expected format: yyyy-MM-dd";
+        } else {
+            message = e.getMessage();
+        }
 
         log.warn("HttpMessageNotReadableException: {}", e.getMessage());
 
-        return buildErrorResponse(e,HttpStatus.BAD_REQUEST,request);
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                .message(message)
+                .path(request.getRequestURI())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
     }
 
     //@Valid exceptions
@@ -79,16 +95,30 @@ public class GlobalExceptionHandler {
             MethodArgumentNotValidException ex,
             WebRequest request) {
 
-        Map<String, String> fieldErrors = new HashMap<>();
-        List<String> globalErrors = List.of();
+        Map<String, List<String>> fieldErrors = new HashMap<>();
+        List<String> globalErrors = new ArrayList<>();
 
         log.debug("Validation failed: {}", ex.getMessage());
 
+        // Collect all field errors - multiple errors per field
         ex.getBindingResult().getAllErrors().forEach(error -> {
-            if (error instanceof FieldError) {
-                String fieldName = ((FieldError) error).getField();
+            if (error instanceof FieldError fieldError) {
+                String fieldName = fieldError.getField();
                 String errorMessage = error.getDefaultMessage();
-                fieldErrors.put(fieldName, errorMessage);
+
+                // Add multiple errors for the same field
+                fieldErrors.computeIfAbsent(fieldName, k -> new ArrayList<>())
+                        .add(errorMessage);
+
+                // Log each error
+                log.debug("Field '{}' rejected value '{}': {}",
+                        fieldName,
+                        fieldError.getRejectedValue(),
+                        errorMessage);
+            } else {
+                // Global errors (class-level constraints)
+                globalErrors.add(error.getDefaultMessage());
+                log.debug("Global error: {}", error.getDefaultMessage());
             }
         });
 
@@ -100,6 +130,7 @@ public class GlobalExceptionHandler {
                 globalErrors,
                 request.getDescription(false)
         );
+
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(errorResponse);
@@ -149,6 +180,14 @@ public class GlobalExceptionHandler {
     }
 
     //auth exceptions
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ErrorResponse> handleBadCredentials(
+                BadCredentialsException e,
+            HttpServletRequest request) {
+
+        return buildErrorResponse(e, HttpStatus.UNAUTHORIZED, request);
+    }
 
     @ExceptionHandler(AuthorizationDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAuthorizationDenied(
@@ -212,9 +251,18 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(e,HttpStatus.NOT_FOUND,request);
     }
 
-    @ExceptionHandler(ProjectArchivedException.class)
+    @ExceptionHandler(ProjectCannotUpdateException.class)
     public ResponseEntity<ErrorResponse> handleProjectArchived(
-            ProjectArchivedException e,
+            ProjectCannotUpdateException e,
+            HttpServletRequest request
+    ){
+        log.warn("(ProjectCannotUpdateException: {}", e.getMessage());
+        return buildErrorResponse(e,HttpStatus.CONFLICT,request);
+    }
+
+    @ExceptionHandler(ProjectOperationBlockedException.class)
+    public ResponseEntity<ErrorResponse> handleProjectOperationBlocked(
+            ProjectOperationBlockedException e,
             HttpServletRequest request
     ){
         log.warn("ProjectArchivedException: {}", e.getMessage());
@@ -277,6 +325,52 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(e,HttpStatus.CONFLICT,request);
     }
 
+    @ExceptionHandler(CreateTaskDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleCreateTaskDenied(
+            CreateTaskDeniedException e,
+            HttpServletRequest request
+    ){
+        log.warn("CreateTaskDeniedException: {}", e.getMessage());
+        return buildErrorResponse(e,HttpStatus.FORBIDDEN,request);
+    }
+
+    @ExceptionHandler(TaskInvalidOperationException.class)
+    public ResponseEntity<ErrorResponse> handleTaskInvalidOperation(
+            TaskInvalidOperationException e,
+            HttpServletRequest request
+    ){
+        log.warn("TaskInvalidOperationException: {}", e.getMessage());
+        return buildErrorResponse(e,HttpStatus.CONFLICT,request);
+    }
+
+    @ExceptionHandler(InvalidStatusTransitionException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidStatusTransition(
+            InvalidStatusTransitionException e,
+            HttpServletRequest request
+    ){
+        log.warn("InvalidStatusTransitionException: {}", e.getMessage());
+        return buildErrorResponse(e,HttpStatus.CONFLICT,request);
+    }
+
+    @ExceptionHandler(TaskStatusTransitionDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidStatusTransition(
+            TaskStatusTransitionDeniedException e,
+            HttpServletRequest request
+    ){
+        log.warn("ITaskStatusTransitionDeniedException: {}", e.getMessage());
+        return buildErrorResponse(e,HttpStatus.FORBIDDEN,request);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handlePermissionDeniedGeneric(
+            AccessDeniedException e,
+            HttpServletRequest request) {
+
+        log.error("AccessDeniedException {}",
+                 e.getMessage());
+
+        return buildErrorResponse(e,HttpStatus.FORBIDDEN,request);
+    }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneric(

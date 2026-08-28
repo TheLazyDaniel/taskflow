@@ -15,10 +15,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @Slf4j
 @RestController
+@RequestMapping(value = "/auth")
 public class AuthController {
 
     private final AuthService authService;
@@ -29,7 +31,7 @@ public class AuthController {
         this.userService = userService;
     }
 
-    @PostMapping(value = "/users/register")
+    @PostMapping(value = "/register")
     public ResponseEntity<UserPublicResponse> createUser(
             @Valid @RequestBody RegisterRequest registerRequest) {
 
@@ -38,13 +40,13 @@ public class AuthController {
 
         UserPublicResponse userPublicResponse = userService.registerUser(registerRequest);
 
-        log.info("User {} registered successfully", userPublicResponse);
+        log.info("User registered successfully: username={}", registerRequest.username());
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(userPublicResponse);
     }
 
-    @PostMapping(value = "/auth/login")
+    @PostMapping(value = "/login")
     public ResponseEntity<JwtResponse> userLogin(
             @Valid @RequestBody LoginRequest loginRequest) {
 
@@ -56,14 +58,14 @@ public class AuthController {
         ));
     }
 
-    @PostMapping(value = "/auth/refresh")
+    @PostMapping(value = "/refresh")
     public ResponseEntity<TokenRefreshResponse> userRefresh(
             @Valid @RequestBody RefreshTokenRequest refreshTokenRequest) {
-        log.info("Received request to refresh token: token={}", refreshTokenRequest.refreshToken());
+        log.info("Received request to refresh token");
         return ResponseEntity.ok(authService.refreshToken(refreshTokenRequest));
     }
 
-    @PostMapping(value = "/auth/logout")
+    @PostMapping(value = "/logout")
     public ResponseEntity<String> userLogout() {
 
         log.info("Received request to logout user: username={}", SecurityUtils.getCurrentUsername());
@@ -75,7 +77,7 @@ public class AuthController {
     public ResponseEntity<JwtResponse> userVerify(
             @Valid @RequestBody LoginRequest loginRequest) {
 
-        log.info("Received request to login user: username={}", loginRequest.username());
+        log.info("Received request to verify user: username={}", loginRequest.username());
 
         JwtResponse jwtResponse = authService.authenticateUser(
                 loginRequest.username(),

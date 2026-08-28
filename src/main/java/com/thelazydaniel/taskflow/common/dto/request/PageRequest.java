@@ -2,40 +2,38 @@ package com.thelazydaniel.taskflow.common.dto.request;
 
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotNull;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import jakarta.validation.constraints.Pattern;
 import org.hibernate.query.SortDirection;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Pageable;
 
-
-@Data
-@NoArgsConstructor
-public class PageRequest {
-        @NotNull
+public record PageRequest(
         @Min(value = 0, message = "Page has to be larger than 0")
-        private Integer page;
+        Integer page,  // Optional - can be null
 
-        @NotNull
         @Min(value = 1, message = "Size has to be larger than 0.")
         @Max(value = 100, message = "Size has to be at most 100.")
-        private Integer size;
+        Integer size,  // Optional
 
-        private String sortBy = "id";
-
-        private SortDirection direction = SortDirection.ASCENDING;
-
-        public PageRequest(int page, int size, String criteria, String direction) {
-                this.page = page;
-                this.size = size;
-                this.sortBy = criteria;
-                this.direction = SortDirection.valueOf(direction);
+        String sortBy,
+        @Pattern(regexp = "(?i)ASC|DESC", message = "Direction must be ASC or DESC (case-insensitive)")
+        String direction
+) {
+        public PageRequest {
+                if (page == null) page = 0;
+                if (size == null) size = 20;
+                if (sortBy == null) sortBy = "id";
+                if (direction == null || direction.isBlank()) direction = "ASC";
         }
 
-        public Pageable toPageable(){
-            Sort sort = Sort.by(String.valueOf(direction),sortBy);
-            return org.springframework.data.domain.PageRequest.of(page,size,sort);
+        public Pageable toPageable() {
+                // Convert Hibernate SortDirection to Spring's Sort.Direction
+                Sort.Direction dir = "DESC".equalsIgnoreCase(direction)
+                        ? Sort.Direction.DESC
+                        : Sort.Direction.ASC;
+
+                Sort sort = Sort.by(dir, sortBy);
+                return org.springframework.data.domain.PageRequest.of(page, size, sort);
         }
 }
 

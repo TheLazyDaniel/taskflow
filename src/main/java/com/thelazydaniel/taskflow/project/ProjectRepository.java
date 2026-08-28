@@ -12,4 +12,11 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
     @Override
     @NonNull
     Page<Project> findAll(@NonNull Pageable pageable);
+
+    boolean existsByOwnerId(@NonNull Long id);
+
+    boolean existsByOwnerIdAndId(Long ownerId, Long id);
+
+    boolean existsByNameAndOwnerId(String name, Long ownerId);
+
 }
