@@ -1,14 +1,16 @@
-package com.thelazydaniel.taskflow.auth.controller;
+package com.thelazydaniel.taskflow.auth;
 
-import com.thelazydaniel.taskflow.auth.dto.request.LoginRequest;
-import com.thelazydaniel.taskflow.auth.dto.request.RefreshTokenRequest;
+import com.thelazydaniel.taskflow.auth.dto.request.*;
 import com.thelazydaniel.taskflow.auth.dto.response.JwtResponse;
+import com.thelazydaniel.taskflow.auth.dto.response.LogoutResponse;
 import com.thelazydaniel.taskflow.auth.dto.response.TokenRefreshResponse;
+import com.thelazydaniel.taskflow.auth.dto.response.TokenVerifyResponse;
 import com.thelazydaniel.taskflow.auth.service.AuthService;
+import com.thelazydaniel.taskflow.auth.service.LogoutService;
 import com.thelazydaniel.taskflow.common.util.SecurityUtils;
 import com.thelazydaniel.taskflow.user.service.UserService;
-import com.thelazydaniel.taskflow.auth.dto.request.RegisterRequest;
 import com.thelazydaniel.taskflow.user.dto.response.UserPublicResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -25,10 +27,12 @@ public class AuthController {
 
     private final AuthService authService;
     private final UserService userService;
+    private final LogoutService logoutService;
 
-    public AuthController(AuthService authService, UserService userService) {
+    public AuthController(AuthService authService, UserService userService, LogoutService logoutService) {
         this.authService = authService;
         this.userService = userService;
+        this.logoutService = logoutService;
     }
 
     @PostMapping(value = "/register")
@@ -66,23 +70,22 @@ public class AuthController {
     }
 
     @PostMapping(value = "/logout")
-    public ResponseEntity<String> userLogout() {
+    public ResponseEntity<LogoutResponse> userLogout(
+            @Valid @RequestBody LogoutRequest logoutRequest,
+            HttpServletRequest httpServletRequest
+            ) {
 
         log.info("Received request to logout user: username={}", SecurityUtils.getCurrentUsername());
 
-        return ResponseEntity.ok(authService.userLogout());
+        return ResponseEntity.ok(logoutService.logout(httpServletRequest,logoutRequest));
     }
 
-    @PostMapping(value = "/auth/verify")
-    public ResponseEntity<JwtResponse> userVerify(
-            @Valid @RequestBody LoginRequest loginRequest) {
+    @PostMapping(value = "/verify")
+    public ResponseEntity<TokenVerifyResponse> userVerify(
+            @Valid @RequestBody TokenVerifyRequest tokenVerifyRequest) {
 
-        log.info("Received request to verify user: username={}", loginRequest.username());
+        log.info("Received request to verify token, type {}",tokenVerifyRequest.type().name());
 
-        JwtResponse jwtResponse = authService.authenticateUser(
-                loginRequest.username(),
-                loginRequest.password()
-        );
-        return ResponseEntity.ok(jwtResponse);
+        return ResponseEntity.ok(authService.verifyToken(tokenVerifyRequest));
     }
 }

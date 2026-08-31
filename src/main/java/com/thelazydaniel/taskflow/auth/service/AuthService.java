@@ -1,5 +1,6 @@
 package com.thelazydaniel.taskflow.auth.service;
 
+import com.thelazydaniel.taskflow.auth.dto.request.LogoutRequest;
 import com.thelazydaniel.taskflow.auth.dto.request.RefreshTokenRequest;
 import com.thelazydaniel.taskflow.auth.dto.request.TokenVerifyRequest;
 import com.thelazydaniel.taskflow.auth.dto.response.JwtResponse;
@@ -9,13 +10,12 @@ import com.thelazydaniel.taskflow.auth.exception.AccountDisabledException;
 import com.thelazydaniel.taskflow.auth.exception.AccountLockedException;
 import com.thelazydaniel.taskflow.auth.exception.InvalidRefreshTokenException;
 import com.thelazydaniel.taskflow.auth.exception.RefreshTokenExpiredException;
+import com.thelazydaniel.taskflow.security.TokenType;
+import com.thelazydaniel.taskflow.security.TokenValidationResult;
 import com.thelazydaniel.taskflow.security.jwt.JwtTokenProvider;
-import com.thelazydaniel.taskflow.user.service.UserAuthService;
-import com.thelazydaniel.taskflow.user.service.UserValidationService;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtException;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.authentication.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -24,7 +24,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
+import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -36,8 +38,7 @@ public class AuthService {
 
     private final JwtTokenProvider jwtTokenProvider;
 
-    private final UserAuthService userAuthService;
-
+    private final TokenBlackListService tokenBlackListService;
 
     public JwtResponse authenticateUser(String username, String password) {
         try {
@@ -53,9 +54,7 @@ public class AuthService {
 
             UserDetails userDetails = (UserDetails) authentication.getPrincipal();
 
-            List<String> roles = userDetails.getAuthorities().stream()
-                    .map(GrantedAuthority::getAuthority)
-                    .collect(Collectors.toList());
+            List<String> roles = extractRoles(userDetails);
 
             log.debug("Roles {}", roles);
 
@@ -65,7 +64,8 @@ public class AuthService {
             );
 
             String refreshToken = jwtTokenProvider.generateRefreshToken(
-                    userDetails.getUsername()
+                    userDetails.getUsername(),
+                    roles
             );
 
             long duration = System.currentTimeMillis() - startTime;
@@ -80,7 +80,6 @@ public class AuthService {
                     .build();
 
         } catch (BadCredentialsException e) {
-            // This will catch UsernameNotFoundException when hideUserNotFoundExceptions=true
             log.warn("Invalid credentials for user: {}", username);
             throw new BadCredentialsException("Invalid username or password", e);
 
@@ -100,32 +99,139 @@ public class AuthService {
 
     public TokenRefreshResponse refreshToken(RefreshTokenRequest refreshTokenRequest) {
         String refreshToken = refreshTokenRequest.refreshToken();
-        if (jwtTokenProvider.isTokenExpired(refreshToken)){
-            throw new RefreshTokenExpiredException("Refresh token has expired. Please login again.");
+
+        // Check if token is blacklisted
+        if (tokenBlackListService.isTokenBlacklisted(refreshToken)) {
+            throw new InvalidRefreshTokenException("Refresh token has been revoked");
         }
-        if (!jwtTokenProvider.validateToken(refreshToken)){
-            throw new InvalidRefreshTokenException("Invalid refresh token");
+
+        TokenValidationResult validationResult = jwtTokenProvider.validateToken(refreshToken, TokenType.REFRESH);
+
+        if (validationResult.isExpired()) {
+            throw new RefreshTokenExpiredException(validationResult.message());
         }
+
+        if (!validationResult.isValid()) {
+            throw new InvalidRefreshTokenException(validationResult.message());
+        }
+
         try {
-            String username = jwtTokenProvider.getUsernameFromToken(refreshToken);
-            List<String> roles = userAuthService.getUserRolesFromUsername(username);
-            String newAccessToken = jwtTokenProvider.generateTokenFromUsername(
-                    username,
-                    roles
-            );
-            String newRefreshToken = jwtTokenProvider.generateRefreshToken(username);
+            // Extract claims using refresh token methods
+            String username = jwtTokenProvider.getUsernameFromRefreshToken(refreshToken);
+            List<String> roles = jwtTokenProvider.getRolesFromRefreshToken(refreshToken);
+
+            // Generate new tokens
+            String newAccessToken = jwtTokenProvider.generateTokenFromUsername(username, roles);
+            String newRefreshToken = jwtTokenProvider.generateRefreshToken(username, roles);
+
+            // Blacklist the old refresh token for rotation
+            tokenBlackListService.blacklistToken(refreshToken,
+                    jwtTokenProvider.getRemainingExpirationMsFromRefreshToken(refreshToken));
+
+            log.info("Token refreshed successfully for user: {}", username);
+
             return new TokenRefreshResponse(newAccessToken, newRefreshToken, "Bearer");
-        } catch (JwtException | IllegalArgumentException e){
-            throw new InvalidRefreshTokenException("Invalid refresh token: " + e.getMessage());
+
+        } catch (Exception e) {
+            log.error("Error refreshing token: {}", e.getMessage());
+            throw new InvalidRefreshTokenException("Failed to refresh token: " + e.getMessage());
         }
     }
 
     public TokenVerifyResponse verifyToken(TokenVerifyRequest tokenVerifyRequest){
-        return null;
+        String token = tokenVerifyRequest.token();
+        TokenType tokenType = "ASSESS".equalsIgnoreCase(tokenVerifyRequest.token())
+                ? TokenType.ACCESS
+                : TokenType.REFRESH;
+
+        boolean isRevoked = tokenBlackListService.isTokenBlacklisted(token);
+        if (isRevoked) {
+            log.warn("Token has been revoked");
+            return TokenVerifyResponse.builder()
+                    .valid(false)
+                    .expired(false)
+                    .revoked(true)
+                    .message("Token has been revoked")
+                    .tokenType(tokenType.name())
+                    .build();
+        }
+
+        TokenValidationResult validationResult = jwtTokenProvider.validateToken(token,tokenType);
+        if (!validationResult.isValid()) {
+            log.warn("Invalid token: {}", validationResult.message());
+            return TokenVerifyResponse.builder()
+                    .valid(false)
+                    .expired(validationResult.isExpired())
+                    .revoked(false)
+                    .message(validationResult.message())
+                    .tokenType(tokenType.name())
+                    .remainingExpirationMs(validationResult.remainingExpirationMs())
+                    .build();
+        }
+        try {
+            String username = extractUsername(token, tokenType);
+            List<String> roles = extractRoles(token, tokenType);
+            long remainingMs = getRemainingExpirationMs(token, tokenType);
+            Date expirationDate = getExpirationDate(token, tokenType);
+
+            log.info("Token verified successfully for user: {}, type: {}, remaining: {}ms",
+                    username, tokenType, remainingMs);
+
+            return TokenVerifyResponse.builder()
+                    .valid(true)
+                    .expired(false)
+                    .revoked(false)
+                    .message("Token is valid")
+                    .tokenType(tokenType.name())
+                    .username(username)
+                    .roles(roles)
+                    .remainingExpirationMs(remainingMs)
+                    .expirationDate(expirationDate)
+                    .build();
+
+        } catch (Exception e) {
+            log.error("Error extracting token information: {}", e.getMessage());
+            return TokenVerifyResponse.builder()
+                    .valid(false)
+                    .expired(false)
+                    .revoked(false)
+                    .message("Error extracting token information: " + e.getMessage())
+                    .tokenType(tokenType.name())
+                    .build();
+        }
     }
 
-    public String userLogout(){
-        SecurityContextHolder.clearContext();
-        return "logout successful";
+    private List<String> extractRoles(UserDetails userDetails) {
+        return userDetails.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .filter(Objects::nonNull)  // Filter out null authority strings
+                .map(String::trim)  // Filter out empty strings
+                .filter(trim -> !trim.isEmpty())  // Trim whitespace
+                .distinct()  // Remove duplicates
+                .collect(Collectors.toList());
+    }
+
+    private List<String> extractRoles(String token, TokenType tokenType) {
+        return tokenType == TokenType.REFRESH
+                ? jwtTokenProvider.getRolesFromRefreshToken(token)
+                : jwtTokenProvider.getRolesFromToken(token);
+    }
+
+    private String extractUsername(String token, TokenType tokenType) {
+        return tokenType == TokenType.REFRESH
+                ? jwtTokenProvider.getUsernameFromRefreshToken(token)
+                : jwtTokenProvider.getUsernameFromToken(token);
+    }
+
+    private long getRemainingExpirationMs(String token, TokenType tokenType) {
+        return tokenType == TokenType.REFRESH
+                ? jwtTokenProvider.getRemainingExpirationMsFromRefreshToken(token)
+                : jwtTokenProvider.getRemainingExpirationMsFromAccessToken(token);
+    }
+
+    private Date getExpirationDate(String token, TokenType tokenType) {
+        return tokenType == TokenType.REFRESH
+                ? jwtTokenProvider.getExpirationFromRefreshToken(token)
+                : jwtTokenProvider.getExpirationFromAccessToken(token);
     }
 }

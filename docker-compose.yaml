@@ -1,0 +1,34 @@
+version: '3.8'
+services:
+  redis:
+    image: redis:8.10-alpine
+    container_name: security-redis
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD}
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    restart: unless-stopped
+    networks:
+      - security-net
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: redis-commander
+    environment:
+      - REDIS_HOSTS=local:redis:6379?password=${REDIS_PASSWORD}
+    ports:
+      - "127.0.0.1:8081:8081"
+    depends_on:
+      - redis
+    networks:
+      - security-net
+
+volumes:
+  redis-data:
+
+networks:
+  security-net:
+    driver: bridge

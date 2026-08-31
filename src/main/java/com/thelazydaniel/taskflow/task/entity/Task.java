@@ -60,8 +60,4 @@ public class Task extends BaseEntity {
     @Column(name = "project_id",nullable = true)
     private Long projectId;
 
-    public void detachFromProject() {
-        this.projectId = null;
-        this.project = null;
-    }
 }

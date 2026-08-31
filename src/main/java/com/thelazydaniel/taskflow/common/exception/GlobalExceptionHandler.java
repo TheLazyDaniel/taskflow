@@ -157,29 +157,15 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(e,HttpStatus.BAD_REQUEST,request);
     }
 
-    //User exceptions
-
-    @ExceptionHandler(UserIdNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleUserIdNotFound(
-            UserIdNotFoundException e,
-            HttpServletRequest request) {
-
-        log.warn("UserIdNotFoundException: {}", e.getMessage());
-
-        return buildErrorResponse(e,HttpStatus.NOT_FOUND,request);
-    }
-
-    @ExceptionHandler(UserNameNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleUserNameNotFound(
-            UserNameNotFoundException e,
-            HttpServletRequest request) {
-
-        log.warn("UserNameNotFoundException: {}", e.getMessage());
-
-        return buildErrorResponse(e,HttpStatus.NOT_FOUND,request);
-    }
-
     //auth exceptions
+
+    @ExceptionHandler(TokenNotMatchException.class)
+    public ResponseEntity<ErrorResponse> handleTokenNotMatch(
+            TokenNotMatchException e,
+            HttpServletRequest request) {
+
+        return buildErrorResponse(e, HttpStatus.UNAUTHORIZED, request);
+    }
 
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ErrorResponse> handleBadCredentials(
@@ -217,6 +203,14 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(e,HttpStatus.FORBIDDEN,request);
     }
 
+    @ExceptionHandler(InvalidAccessTokenException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidAccessToken(
+            InvalidAccessTokenException e,
+            HttpServletRequest request) {
+        log.warn("IInvalidAccessTokenException: {}", e.getMessage());
+        return buildErrorResponse(e,HttpStatus.UNAUTHORIZED,request);
+    }
+
     @ExceptionHandler(InvalidRefreshTokenException.class)
     public ResponseEntity<ErrorResponse> handleInvalidRefreshToken(
             InvalidRefreshTokenException e,
@@ -240,6 +234,29 @@ public class GlobalExceptionHandler {
         log.warn("UnauthorizedException: {}", e.getMessage());
         return buildErrorResponse(e,HttpStatus.FORBIDDEN,request);
     }
+
+    //User exceptions
+
+    @ExceptionHandler(UserIdNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleUserIdNotFound(
+            UserIdNotFoundException e,
+            HttpServletRequest request) {
+
+        log.warn("UserIdNotFoundException: {}", e.getMessage());
+
+        return buildErrorResponse(e,HttpStatus.NOT_FOUND,request);
+    }
+
+    @ExceptionHandler(UserNameNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleUserNameNotFound(
+            UserNameNotFoundException e,
+            HttpServletRequest request) {
+
+        log.warn("UserNameNotFoundException: {}", e.getMessage());
+
+        return buildErrorResponse(e,HttpStatus.NOT_FOUND,request);
+    }
+
     //Project exceptions
 
     @ExceptionHandler(ProjectIdNotFoundException.class)

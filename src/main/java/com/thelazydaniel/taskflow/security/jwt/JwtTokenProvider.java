@@ -1,5 +1,7 @@
 package com.thelazydaniel.taskflow.security.jwt;
 
+import com.thelazydaniel.taskflow.security.TokenType;
+import com.thelazydaniel.taskflow.security.TokenValidationResult;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -25,6 +27,9 @@ public class JwtTokenProvider {
 
     @Value("${app.jwt.secret}")
     private String jwtSecret;
+
+    @Value("{app.jwt.refresh-secret}")
+    private String jwtRefreshSecret;
 
     @Value("${app.jwt.expiration-ms}")
     private long jwtExpirationMs;
@@ -67,106 +72,174 @@ public class JwtTokenProvider {
 
         Map<String, Object> claims = new HashMap<>();
         claims.put("role", authorities);
+        claims.put("type", "access");
 
         log.debug("Generated JWT Token for username: {}, roles: {}", username, claims);
 
-        return Jwts.builder()
-                .claims(claims)
-                .subject(username)
-                .issuer("taskflow")
-                .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
-                .id(java.util.UUID.randomUUID().toString())
-                .signWith(getSigningKey())
-                .compact();
+        return buildToken(claims, username, jwtExpirationMs, getAccessTokenSigningKey());
+
     }
 
-    public String generateRefreshToken(String username) {
-        return Jwts.builder()
-                .subject(username)
-                .issuer("taskflow")
-                .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + jwtRefreshExpirationMs))
-                .id(java.util.UUID.randomUUID().toString())
-                .signWith(getSigningKey())
-                .compact();
+    public String generateRefreshToken(String username, List<String> authorities) {
+        log.debug("Generating refresh token for username: {}", username);
+
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("roles", authorities);
+        claims.put("type", "refresh");
+
+        return buildToken(claims, username, jwtRefreshExpirationMs, getRefreshTokenSigningKey());
     }
 
-    public String getUsernameFromToken(String token) {
-        return extractClaim(token, Claims::getSubject);
-    }
-
-    public Date getExpirationFromToken(String token) {
-        return extractClaim(token, Claims::getExpiration);
-    }
-
-    @SuppressWarnings("unchecked")
-    public List<String> getRolesFromToken(String token) {
-        Claims claims = getAllClaimsFromToken(token);
-        return claims.get("role", List.class);
-    }
-
-    public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
-        final Claims claims = getAllClaimsFromToken(token);
-        return claimsResolver.apply(claims);
-    }
-
-    public Claims getAllClaimsFromToken(String token){
+    public Claims getAllClaimsFromToken(String token, SecretKey signingKey){
         return Jwts.parser()
-                .verifyWith(getSigningKey())
+                .verifyWith(signingKey)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
     }
 
-    public boolean validateToken(String token) {
+    public <T> T extractClaim(
+            String token,
+            Function<Claims, T> claimsResolver,
+            SecretKey signingKey) {
+        final Claims claims = getAllClaimsFromToken(token, signingKey);
+        return claimsResolver.apply(claims);
+    }
+
+    public String getUsernameFromToken(String token) {
+        return extractClaim(token, Claims::getSubject, getAccessTokenSigningKey());
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<String> getRolesFromToken(String token) {
+        Claims claims = getAllClaimsFromToken(token, getAccessTokenSigningKey());
+        return claims.get("role", List.class);
+    }
+
+    public String getUsernameFromRefreshToken(String token) {
+        return extractClaim(token, Claims::getSubject, getRefreshTokenSigningKey());
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<String> getRolesFromRefreshToken(String token) {
+        Claims claims = getAllClaimsFromToken(token, getRefreshTokenSigningKey());
+        return claims.get("roles", List.class);
+    }
+
+    public long getRemainingExpirationMsFromRefreshToken(String refreshToken) {
         try {
-            Jwts.parser()
-                    .verifyWith(getSigningKey())
-                    .build()
-                    .parseSignedClaims(token);
+            Date expirationDate = getExpirationFromRefreshToken(refreshToken);
+            Date now = new Date();
 
-            log.debug("JWT Token validated successfully");
+            long remainingMs = expirationDate.getTime() - now.getTime();
 
-            return true;
-        } catch (SecurityException | MalformedJwtException e) {
-            log.error("Invalid JWT Signature: {}", e.getMessage());
+            // Return 0 if token is already expired
+            return Math.max(0, remainingMs);
+
         } catch (ExpiredJwtException e) {
-            log.error("Expired JWT Token: {}", e.getMessage());
+            log.debug("Refresh token already expired");
+            return 0;
+        } catch (Exception e) {
+            log.error("Error getting expiration from refresh token: {}", e.getMessage());
+            return 0;
+        }
+    }
+
+    public Date getExpirationFromRefreshToken(String token) {
+        Claims claims = getAllClaimsFromToken(token, getRefreshTokenSigningKey());
+        return claims.getExpiration();
+    }
+
+    public long getRemainingExpirationMsFromAccessToken(String accessToken) {
+        try {
+            Date expirationDate = getExpirationFromAccessToken(accessToken);
+            Date now = new Date();
+
+            long remainingMs = expirationDate.getTime() - now.getTime();
+
+            return Math.max(0, remainingMs);
+
+        } catch (ExpiredJwtException e) {
+            log.debug("Access token already expired");
+            return 0;
+        } catch (Exception e) {
+            log.error("Error getting expiration from access token: {}", e.getMessage());
+            return 0;
+        }
+    }
+
+    public Date getExpirationFromAccessToken(String token) {
+        Claims claims = getAllClaimsFromToken(token, getAccessTokenSigningKey());
+        return claims.getExpiration();
+    }
+
+    public TokenValidationResult validateToken(String token, TokenType expectedType) {
+        SecretKey signingKey = getSigningKeyForTokenType(expectedType);
+        try {
+            Claims claims = getAllClaimsFromToken(token,signingKey);
+
+            // Check token type
+            String tokenType = claims.get("type", String.class);
+            if (tokenType == null || !tokenType.equals(expectedType.name().toLowerCase())) {
+                return TokenValidationResult.invalid("Invalid token type");
+            }
+
+            // Check expiration
+            if (claims.getExpiration().before(new Date())) {
+                return TokenValidationResult.expired("Token has expired");
+            }
+
+            return TokenValidationResult.valid(claims);
+
+        } catch (ExpiredJwtException e) {
+            log.warn("Expired JWT token: {}", e.getMessage());
+            return TokenValidationResult.expired("Token has expired");
+        } catch (SecurityException | MalformedJwtException e) {
+            log.error("Invalid JWT signature: {}", e.getMessage());
+            return TokenValidationResult.invalid("Invalid token signature");
         } catch (UnsupportedJwtException e) {
-            log.error("Unsupported JWT Token: {}", e.getMessage());
+            log.error("Unsupported JWT token: {}", e.getMessage());
+            return TokenValidationResult.invalid("Unsupported token");
         } catch (IllegalArgumentException e) {
             log.error("JWT claims string is empty: {}", e.getMessage());
-        }
-        return false;
-    }
-
-    public boolean isTokenExpired(String token) {
-        try {
-            return getExpirationFromToken(token).before(new Date());
-        } catch (ExpiredJwtException e) {
-            return true;
+            return TokenValidationResult.invalid("Invalid token");
         }
     }
 
-    public String getTokenType(String token) {
-        try {
-            Claims claims = getAllClaimsFromToken(token);
-            return claims.get("type", String.class);
-        } catch (Exception e) {
-            return null;
-        }
+
+    private SecretKey getAccessTokenSigningKey() {
+        return getSigningKey(jwtSecret);
     }
 
-    public boolean canTokenBeRefreshed(String token) {
-        try {
-            return !isTokenExpired(token);
-        } catch (Exception e) {
-            return false;
-        }
+    private SecretKey getRefreshTokenSigningKey() {
+        return getSigningKey(jwtRefreshSecret);
     }
-    private SecretKey getSigningKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
+
+    private SecretKey getSigningKey(String secret) {
+        byte[] keyBytes = Decoders.BASE64.decode(secret);
         return Keys.hmacShaKeyFor(keyBytes);
+    }
+
+    private SecretKey getSigningKeyForTokenType(TokenType tokenType) {
+        return switch (tokenType) {
+            case ACCESS -> getAccessTokenSigningKey();
+            case REFRESH -> getRefreshTokenSigningKey();
+        };
+    }
+
+    private String buildToken(
+            Map<String, Object> claims,
+            String subject,
+            long expirationMs,
+            SecretKey signingKey) {
+        return Jwts.builder()
+                .claims(claims)
+                .subject(subject)
+                .issuer("taskflow")
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + expirationMs))
+                .id(java.util.UUID.randomUUID().toString())
+                .signWith(signingKey)
+                .compact();
     }
 }

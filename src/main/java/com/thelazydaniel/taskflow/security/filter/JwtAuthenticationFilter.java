@@ -1,6 +1,7 @@
 package com.thelazydaniel.taskflow.security.filter;
 
 import com.thelazydaniel.taskflow.common.dto.response.ErrorResponse;
+import com.thelazydaniel.taskflow.security.TokenType;
 import com.thelazydaniel.taskflow.security.jwt.JwtTokenProvider;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -49,7 +50,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String jwt = parseJwt(request);
 
 
-            if (jwt != null && jwtTokenProvider.validateToken(jwt)) {
+            if (jwt != null && jwtTokenProvider.validateToken(jwt, TokenType.ACCESS).isValid()) {
                 String username = jwtTokenProvider.getUsernameFromToken(jwt);
                 List<String> roles = jwtTokenProvider.getRolesFromToken(jwt);
 
