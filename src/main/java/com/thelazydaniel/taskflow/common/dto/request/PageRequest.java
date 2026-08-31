@@ -3,7 +3,6 @@ package com.thelazydaniel.taskflow.common.dto.request;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
-import org.hibernate.query.SortDirection;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Pageable;
 

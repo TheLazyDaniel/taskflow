@@ -1,6 +1,7 @@
 package com.thelazydaniel.taskflow.security.permission;
 
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.PermissionEvaluator;
 import org.springframework.security.core.Authentication;
@@ -33,9 +34,9 @@ public class DelegatingPermissionEvaluator implements PermissionEvaluator {
     }
 
     @Override
-    public boolean hasPermission(Authentication authentication,
+    public boolean hasPermission(@NonNull Authentication authentication,
                                  Object targetDomainObject,
-                                 Object permission) {
+                                 @NonNull Object permission) {
         log.info("🔍 hasPermission called: auth={}, target={}, permission={}",
                 authentication != null ? authentication.getName() : "null",
                 targetDomainObject,
@@ -72,10 +73,10 @@ public class DelegatingPermissionEvaluator implements PermissionEvaluator {
     }
 
     @Override
-    public boolean hasPermission(Authentication authentication,
-                                 Serializable targetId,
-                                 String targetType,
-                                 Object permission) {
+    public boolean hasPermission(@NonNull Authentication authentication,
+                                 @NonNull Serializable targetId,
+                                 @NonNull String targetType,
+                                 @NonNull Object permission) {
         log.info("🔍 hasPermission called: auth={}, targetId={}, type={}, permission={}",
                 authentication != null ? authentication.getName() : "null",
                 targetId,

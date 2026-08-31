@@ -10,11 +10,10 @@ import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 
 public record UpdateProjectRequest(
-       @NotBlank
-       @Size(min = 1, max = 100)
+       @Size(min = 1, max = 100, message = "Project name length must be between 1 and 100.")
        String name,
 
-       @Size(max = 500)
+       @Size(max = 500, message = "Project description length is at most 500")
        String description,
 
 
