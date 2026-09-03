@@ -2,6 +2,7 @@ package com.thelazydaniel.taskflow.auth.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -14,7 +15,8 @@ public class TokenBlackListService {
 
     private final RedisTemplate<String,Object> redisTemplate;
 
-    private static final String BLACKLIST_KEY_PREFIX = "token:blacklist:";
+    @Value("${security.blacklist.token}")
+    private String blacklistKeyPrefix;
 
     public void blacklistToken(String token, long remainingExpirationMs) {
         if (token == null || token.isEmpty()) {
@@ -27,7 +29,7 @@ public class TokenBlackListService {
             return;
         }
 
-        String key = BLACKLIST_KEY_PREFIX + token;
+        String key = blacklistKeyPrefix + token;
 
         try {
 
@@ -50,7 +52,7 @@ public class TokenBlackListService {
             return true;
         }
 
-        String key = BLACKLIST_KEY_PREFIX + token;
+        String key = blacklistKeyPrefix + token;
 
         try {
             return Boolean.TRUE.equals(redisTemplate.hasKey(key));
@@ -65,7 +67,7 @@ public class TokenBlackListService {
             return;
         }
 
-        String key = BLACKLIST_KEY_PREFIX + token;
+        String key = blacklistKeyPrefix + token;
 
         try {
             redisTemplate.delete(key);

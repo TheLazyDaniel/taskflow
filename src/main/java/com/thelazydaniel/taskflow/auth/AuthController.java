@@ -52,13 +52,14 @@ public class AuthController {
 
     @PostMapping(value = "/login")
     public ResponseEntity<JwtResponse> userLogin(
-            @Valid @RequestBody LoginRequest loginRequest) {
+            @Valid @RequestBody LoginRequest loginRequest, HttpServletRequest httpServletRequest) {
 
         log.info("Received request to login user: username={}", loginRequest.username());
 
         return ResponseEntity.ok(authService.authenticateUser(
                 loginRequest.username(),
-                loginRequest.password()
+                loginRequest.password(),
+                getClientIP(httpServletRequest)
         ));
     }
 
@@ -87,5 +88,13 @@ public class AuthController {
         log.info("Received request to verify token, type {}",tokenVerifyRequest.type().name());
 
         return ResponseEntity.ok(authService.verifyToken(tokenVerifyRequest));
+    }
+
+    private String getClientIP(HttpServletRequest request) {
+        String xfHeader = request.getHeader("X-Forwarded-For");
+        if (xfHeader == null || xfHeader.isEmpty()) {
+            return request.getRemoteAddr();
+        }
+        return xfHeader.split(",")[0].trim();
     }
 }

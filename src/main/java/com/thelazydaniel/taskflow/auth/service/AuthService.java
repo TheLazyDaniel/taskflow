@@ -1,13 +1,10 @@
 package com.thelazydaniel.taskflow.auth.service;
 
-import com.thelazydaniel.taskflow.auth.dto.request.LogoutRequest;
 import com.thelazydaniel.taskflow.auth.dto.request.RefreshTokenRequest;
 import com.thelazydaniel.taskflow.auth.dto.request.TokenVerifyRequest;
 import com.thelazydaniel.taskflow.auth.dto.response.JwtResponse;
 import com.thelazydaniel.taskflow.auth.dto.response.TokenRefreshResponse;
 import com.thelazydaniel.taskflow.auth.dto.response.TokenVerifyResponse;
-import com.thelazydaniel.taskflow.auth.exception.AccountDisabledException;
-import com.thelazydaniel.taskflow.auth.exception.AccountLockedException;
 import com.thelazydaniel.taskflow.auth.exception.InvalidRefreshTokenException;
 import com.thelazydaniel.taskflow.auth.exception.RefreshTokenExpiredException;
 import com.thelazydaniel.taskflow.security.TokenType;
@@ -15,12 +12,11 @@ import com.thelazydaniel.taskflow.security.TokenValidationResult;
 import com.thelazydaniel.taskflow.security.jwt.JwtTokenProvider;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Sort;
+import org.jspecify.annotations.NonNull;
 import org.springframework.security.authentication.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
@@ -40,7 +36,15 @@ public class AuthService {
 
     private final TokenBlackListService tokenBlackListService;
 
-    public JwtResponse authenticateUser(String username, String password) {
+    private final LoginAttemptService loginAttemptService;
+
+    public JwtResponse authenticateUser(String username, String password, String ipAddress) {
+        if (loginAttemptService.isAccountLocked(username)){
+            throw new LockedException("Account is locked due to too many login attempts. Try again later.");
+        }
+        if (loginAttemptService.isIpBlocked(ipAddress)){
+            throw new LockedException("Account is locked due to too many login attempts. Try again later.");
+        }
         try {
             log.debug("Authenticating user {}", username);
 
@@ -49,6 +53,8 @@ public class AuthService {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(username, password)
             );
+
+            loginAttemptService.loginSucceeded(username,ipAddress);
 
             log.debug("Authenticated user {}", authentication.getPrincipal());
 
@@ -79,22 +85,33 @@ public class AuthService {
                     .roles(roles)
                     .build();
 
+        } catch (AccountStatusException e) {
+            String statusMessage = getMessage(e);
+            log.warn("{} for user: {}", statusMessage, username);
+            loginAttemptService.loginFailed(username, ipAddress);
+            throw e;
+
         } catch (BadCredentialsException e) {
-            log.warn("Invalid credentials for user: {}", username);
-            throw new BadCredentialsException("Invalid username or password", e);
-
-        } catch (AccountDisabledException e) {
-            log.warn("Account disabled for user: {}", username);
-            throw new BadCredentialsException("Account is disabled", e);
-
-        } catch (AccountLockedException e) {
-            log.warn("Account locked for user: {}", username);
-            throw new BadCredentialsException("Account is locked", e);
+            log.warn("Invalid username or password: {}", username);
+            loginAttemptService.loginFailed(username, ipAddress);
+            throw e;
 
         } catch (AuthenticationException e) {
             log.error("Authentication failed for user: {}", username, e);
-            throw new BadCredentialsException("Authentication failed", e);
+            loginAttemptService.loginFailed(username, ipAddress);
+            throw e;
         }
+    }
+
+    private static @NonNull String getMessage(AccountStatusException e) {
+
+        return switch (e) {
+            case DisabledException disabledException -> "Account disabled";
+            case LockedException lockedException -> "Account locked";
+            case AccountExpiredException accountExpiredException -> "Account expired";
+            case CredentialsExpiredException credentialsExpiredException -> "Credentials expired";
+            case null, default -> "Account status issue";
+        };
     }
 
     public TokenRefreshResponse refreshToken(RefreshTokenRequest refreshTokenRequest) {
@@ -140,7 +157,7 @@ public class AuthService {
 
     public TokenVerifyResponse verifyToken(TokenVerifyRequest tokenVerifyRequest){
         String token = tokenVerifyRequest.token();
-        TokenType tokenType = "ASSESS".equalsIgnoreCase(tokenVerifyRequest.token())
+        TokenType tokenType = "ASSESS".equalsIgnoreCase(String.valueOf(tokenVerifyRequest.type()))
                 ? TokenType.ACCESS
                 : TokenType.REFRESH;
 

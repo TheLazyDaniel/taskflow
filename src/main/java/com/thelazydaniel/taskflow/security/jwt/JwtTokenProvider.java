@@ -13,10 +13,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -28,7 +25,7 @@ public class JwtTokenProvider {
     @Value("${app.jwt.secret}")
     private String jwtSecret;
 
-    @Value("{app.jwt.refresh-secret}")
+    @Value("${app.jwt.refresh-secret}")
     private String jwtRefreshSecret;
 
     @Value("${app.jwt.expiration-ms}")
@@ -36,6 +33,12 @@ public class JwtTokenProvider {
 
     @Value("${app.jwt.refresh-expiration-ms}")
     private long jwtRefreshExpirationMs;
+
+    private static final Map<TokenType, String> TOKEN_TYPE_CLAIMS = Map.of(
+            TokenType.ACCESS, "access",
+            TokenType.REFRESH, "refresh"
+    );
+
 
     public String generateJwtToken(Authentication authentication) {
 
@@ -84,7 +87,7 @@ public class JwtTokenProvider {
         log.debug("Generating refresh token for username: {}", username);
 
         Map<String, Object> claims = new HashMap<>();
-        claims.put("roles", authorities);
+        claims.put("role", authorities);
         claims.put("type", "refresh");
 
         return buildToken(claims, username, jwtRefreshExpirationMs, getRefreshTokenSigningKey());
@@ -113,7 +116,8 @@ public class JwtTokenProvider {
     @SuppressWarnings("unchecked")
     public List<String> getRolesFromToken(String token) {
         Claims claims = getAllClaimsFromToken(token, getAccessTokenSigningKey());
-        return claims.get("role", List.class);
+        List<String> roles = claims.get("roles", List.class);
+        return roles != null ? roles : Collections.emptyList();
     }
 
     public String getUsernameFromRefreshToken(String token) {
@@ -123,7 +127,8 @@ public class JwtTokenProvider {
     @SuppressWarnings("unchecked")
     public List<String> getRolesFromRefreshToken(String token) {
         Claims claims = getAllClaimsFromToken(token, getRefreshTokenSigningKey());
-        return claims.get("roles", List.class);
+        List<String> roles = claims.get("roles", List.class);
+        return roles != null ? roles : Collections.emptyList();
     }
 
     public long getRemainingExpirationMsFromRefreshToken(String refreshToken) {
@@ -179,8 +184,9 @@ public class JwtTokenProvider {
             Claims claims = getAllClaimsFromToken(token,signingKey);
 
             // Check token type
+            String expectedClaim = TOKEN_TYPE_CLAIMS.get(expectedType);
             String tokenType = claims.get("type", String.class);
-            if (tokenType == null || !tokenType.equals(expectedType.name().toLowerCase())) {
+            if (tokenType == null || !tokenType.equals(expectedClaim)) {
                 return TokenValidationResult.invalid("Invalid token type");
             }
 

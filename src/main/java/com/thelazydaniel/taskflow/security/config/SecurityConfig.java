@@ -2,6 +2,7 @@ package com.thelazydaniel.taskflow.security.config;
 
 import com.thelazydaniel.taskflow.security.entry.JwtAuthEntryPoint;
 import com.thelazydaniel.taskflow.security.filter.JwtAuthenticationFilter;
+import com.thelazydaniel.taskflow.security.filter.RateLimitingFilter;
 import com.thelazydaniel.taskflow.security.permission.DelegatingPermissionEvaluator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
@@ -40,6 +41,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
+            RateLimitingFilter rateLimitingFilter,
             JwtAuthenticationFilter jwtAuthenticationFilter,
             JwtAuthEntryPoint jwtAuthEntryPoint,
             AuthenticationProvider authenticationProvider) {
@@ -62,6 +64,7 @@ public class SecurityConfig {
                 .logout(logout -> logout.disable()
                 )
                 .authenticationProvider(authenticationProvider)
+                .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

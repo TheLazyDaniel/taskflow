@@ -15,7 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.*;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -187,19 +187,18 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(e, HttpStatus.FORBIDDEN, request);
     }
 
-    @ExceptionHandler(AccountDisabledException.class)
-    public ResponseEntity<ErrorResponse> handleAccountDisabled(
-            AccountDisabledException e,
+    @ExceptionHandler(AccountStatusException.class)
+    public ResponseEntity<ErrorResponse> handleAccountStatus(
+            AccountStatusException e,
             HttpServletRequest request) {
-        log.warn("AccountDisabledException: {}", e.getMessage());
-        return buildErrorResponse(e,HttpStatus.FORBIDDEN,request);
-    }
+        switch (e) {
+            case DisabledException _ -> log.warn("DisabledException: {}", e.getMessage());
+            case LockedException _ -> log.warn("LockedException: {}", e.getMessage());
+            case AccountExpiredException _ -> log.warn("AccountExpiredException: {}", e.getMessage());
+            case CredentialsExpiredException _ -> log.warn("CredentialsExpiredException: {}", e.getMessage());
+            default -> log.warn("Account status restriction error");
+        };
 
-    @ExceptionHandler(AccountLockedException.class)
-    public ResponseEntity<ErrorResponse> handleAccountLocked(
-            AccountLockedException e,
-            HttpServletRequest request) {
-        log.warn("AccountLockedException: {}", e.getMessage());
         return buildErrorResponse(e,HttpStatus.FORBIDDEN,request);
     }
 

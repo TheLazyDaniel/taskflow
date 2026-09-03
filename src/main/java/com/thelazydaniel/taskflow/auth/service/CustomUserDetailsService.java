@@ -1,12 +1,12 @@
 package com.thelazydaniel.taskflow.auth.service;
 
 import com.thelazydaniel.taskflow.auth.entity.SecurityUser;
-import com.thelazydaniel.taskflow.auth.exception.AccountDisabledException;
-import com.thelazydaniel.taskflow.auth.exception.AccountLockedException;
 import com.thelazydaniel.taskflow.user.UserRepository;
 import com.thelazydaniel.taskflow.user.entity.User;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -36,12 +36,12 @@ public class CustomUserDetailsService implements UserDetailsService {
 
         if (!user.isEnabled()) {
             log.warn("User is disabled by username: {}", username);
-            throw new AccountDisabledException(username);
+            throw new DisabledException(username);
         }
 
         if (!user.isAccountNonLocked()){
             log.warn("User is locked by username: {}", username);
-            throw new AccountLockedException(username);
+            throw new LockedException(username);
         }
         long duration = System.currentTimeMillis() - startTime;
         log.info("User loaded in: {} ms", duration);
